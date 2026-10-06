@@ -382,7 +382,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id; name = update.effective_user.first_name or "Student"
     touch_user(uid)
     create_user(uid, name)
-    if not await check_joined(context, uid): await force_join_message(update, context); return
     user = get_user(uid)
     if not user.get('verified'): update_user(uid, verified=1)
     if not user.get('user_class'):
@@ -489,7 +488,6 @@ async def set_mode_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ================== PADHAI ==================
 async def padhai_shuru(update: Update, context: ContextTypes.DEFAULT_TYPE):
     touch_user(update.effective_user.id)
-    if not await check_joined(context, update.effective_user.id): await force_join_message(update, context); return
     keys = list(TECHNIQUES.keys()); btns = []; row = []
     for k in keys:
         row.append(InlineKeyboardButton(TECHNIQUES[k]['name'], callback_data=f"tech_{k}"))
