@@ -214,10 +214,40 @@ def norcet_topic_kb(code):
     rows.append([InlineKeyboardButton("🔙 Subject List", callback_data=f"nback_{code[:1]}")])
     return InlineKeyboardMarkup(rows)
 
+DETAILED_TOPIC_CONTENT = {
+    "abnormal labour": {
+        "gif": "https://tenor.com/n0aozzNlOo2.gif",
+        "source": "WHO — Intrapartum care + WHO Labour Care Guide",
+        "source_url": "https://www.who.int/publications/i/item/9789240017566",
+        "sections": [
+            ("1️⃣ Definition / Introduction", "Abnormal labour means labour with abnormal progress or a maternal/fetal problem requiring closer assessment and, when indicated, intervention. It should not be judged only by a fixed cervical-dilatation rate."),
+            ("2️⃣ Causes / Etiology / Risk factors", "🧠 Remember the 3 Ps: Power = uterine contractions; Passenger = fetal size, presentation and position; Passage = maternal pelvis/birth canal. Other contributors include malposition, malpresentation, cephalopelvic disproportion, uterine dysfunction, maternal exhaustion and dehydration."),
+            ("3️⃣ Pathophysiology / Pathogenesis", "⚙️ A problem with contractions, fetal factors or the birth canal can reduce cervical change or fetal descent. Persistent obstruction or difficult labour can increase maternal exhaustion, infection, trauma and fetal compromise."),
+            ("4️⃣ Signs & Symptoms / Clinical features", "🔎 Possible findings: slow/arrested cervical change, poor descent, prolonged labour, abnormal contraction pattern, maternal exhaustion/dehydration, fever or tachycardia, bleeding, and abnormal fetal heart-rate findings. Always interpret the whole clinical picture."),
+            ("5️⃣ Diagnosis / Diagnostic techniques", "🩺 Assess maternal vital signs, contraction frequency/duration/strength, cervical findings, presentation, position, station/descent, membrane status, bleeding and fetal heart rate. 📋 Use the locally adopted evidence-based labour monitoring tool; WHO's Labour Care Guide supports structured monitoring."),
+            ("6️⃣ Medical management", "💧 Supportive care may include appropriate fluids/food according to protocol, analgesia, bladder care, maternal-fetal monitoring, correction of reversible factors and timely obstetric review. Any augmentation/induction should have a clear indication and follow the applicable protocol."),
+            ("7️⃣ Surgical / Obstetric management", "🚑 If there is obstruction, fetal compromise, or another obstetric indication, assisted vaginal birth or caesarean birth may be required. The choice depends on cervical dilatation, station, presentation, fetal status and maternal condition."),
+            ("8️⃣ Pharmacological management", "💊 Medicines are indication- and protocol-dependent. Oxytocin may be used for selected indications under appropriate obstetric supervision and monitoring. Analgesic/anesthetic choices depend on the clinical situation. Never self-administer or independently titrate labour medicines."),
+            ("9️⃣ Nursing management", "👩‍⚕️ Baseline maternal/fetal assessment → monitor vitals, contractions and fetal heart rate → document labour progress → support hydration, bladder care, comfort and position → maintain infection prevention → provide emotional support → escalate deterioration immediately."),
+            ("🔟 Lifestyle / Diet / Prevention", "🥤 Follow facility protocol for oral fluids/food, mobility, position and pain relief. Prevention focuses on good antenatal risk assessment, skilled intrapartum monitoring, early recognition of complications and timely referral—not forcing labour to fit one fixed rate."),
+            ("1️⃣1️⃣ Nursing Care Plan", "📝 Assessment: pain, fatigue, hydration, contractions, fetal status and labour progress. Diagnosis may include acute pain, anxiety, fatigue, deficient-fluid-volume risk or knowledge deficit as appropriate. 🎯 Goals: maternal comfort, stable maternal-fetal status and timely escalation. 🔁 Reassess continuously."),
+            ("1️⃣2️⃣ Nurse Responsibility", "📋 Accurate documentation • 💊 medication-safety checks • 🧼 infection prevention • 📞 structured handover • 🫶 privacy/dignity • 🚨 early escalation • 🏥 preparation for emergency intervention when indicated."),
+            ("1️⃣3️⃣ Complications / Red flags", "🚨 Maternal: heavy bleeding, shock signs, fever/sepsis features, severe/worsening pain, dehydration or exhaustion. 🚨 Fetal: abnormal fetal heart-rate pattern or other evidence of fetal compromise. Obstructed/prolonged labour can increase maternal and fetal risks and may require urgent obstetric management."),
+            ("1️⃣4️⃣ NORCET High-Yield / Case Scenario", "🎯 3 Ps = Power–Passenger–Passage. ❤️ First priority in a deteriorating labouring woman is maternal + fetal assessment and escalation. 📌 Do not use the old 1 cm/hour rule alone as an automatic indication for intervention; WHO notes labour progress varies between women.")
+        ]
+    }
+}
+
 def norcet_topic_info(subject, topic):
-    # This is the common clinical/nursing framework requested by the user.
-    # Topic-specific facts are intentionally separated from the framework so
-    # vetted content can be expanded without changing the navigation.
+    detailed = DETAILED_TOPIC_CONTENT.get(topic.strip().lower())
+    if detailed:
+        txt = f"<b>📖 TOPIC — {escape(topic)}</b>\\n\\n📚 <b>Subject:</b> {escape(subject)}\\n🩺 <b>Detailed Clinical Notes</b>\\n\\n"
+        txt += "\\n\\n".join(f"<b>{escape(h)}</b>\\n{escape(v)}" for h, v in detailed["sections"])
+        txt += "\\n\\n🎯 <b>QUICK REVISION</b>\\n🧠 3 Ps → Power • Passenger • Passage\\n❤️ Correlate maternal + fetal status with labour progress.\\n🚨 Red flags → assess, escalate and document promptly."
+        txt += f"\\n\\n📚 <b>AUTHENTIC SOURCE</b>\\n🌐 {escape(detailed['source'])}\\n🔗 {escape(detailed['source_url'])}"
+        txt += "\\n⚠️ Educational content; patient-specific management follows the treating team's/local protocol."
+        return txt
+
     clinical = any(x in subject.lower() for x in [
         "nursing", "pathology", "pharmacology", "microbiology", "anatomy",
         "physiology", "midwifery", "gynaec", "health", "first aid",
@@ -226,46 +256,40 @@ def norcet_topic_info(subject, topic):
     ])
     if clinical:
         framework = [
-            ("1️⃣ Definition / Introduction", f"{topic}: definition, scope, classification and key terminology."),
-            ("2️⃣ Causes / Etiology / Risk factors", "Major causes, risk factors, predisposing conditions and preventable factors."),
-            ("3️⃣ Pathophysiology / Pathogenesis", "Cause → mechanism → organ/system changes → clinical manifestations."),
-            ("4️⃣ Signs & Symptoms / Clinical features", "Typical findings, important variations, red flags and priority assessment findings."),
-            ("5️⃣ Diagnosis / Diagnostic techniques", "History, physical assessment, relevant laboratory/imaging/bedside tests, interpretation and nursing preparation."),
-            ("6️⃣ Medical management", "Supportive care, monitoring, referral criteria and multidisciplinary management."),
-            ("7️⃣ Surgical management", "Indications, preparation, postoperative monitoring and major complications where applicable."),
-            ("8️⃣ Pharmacological management", "Drug classes, indications, major adverse effects, precautions and medication-safety points."),
-            ("9️⃣ Nursing management", "Assessment, priorities, monitoring, interventions, infection prevention and patient safety."),
-            ("🔟 Lifestyle / Diet / Prevention", "Diet, activity, adherence, risk-factor modification, prevention and health education."),
+            ("1️⃣ Definition / Introduction", f"{topic}: topic-specific verified notes are being expanded."),
+            ("2️⃣ Causes / Etiology / Risk factors", "Only source-verified causes and risk factors should be presented."),
+            ("3️⃣ Pathophysiology / Pathogenesis", "Verified mechanism and clinically relevant links."),
+            ("4️⃣ Signs & Symptoms / Clinical features", "Verified clinical findings and red flags."),
+            ("5️⃣ Diagnosis / Diagnostic techniques", "Verified assessment, investigations and interpretation."),
+            ("6️⃣ Medical management", "Evidence-based management according to indication and current protocol."),
+            ("7️⃣ Surgical management", "Indications, preparation and postoperative nursing where applicable."),
+            ("8️⃣ Pharmacological management", "Verified drug classes, indications, precautions and safety points."),
+            ("9️⃣ Nursing management", "Assessment, monitoring, interventions, education and escalation."),
+            ("🔟 Lifestyle / Diet / Prevention", "Relevant prevention, education and supportive-care measures."),
             ("1️⃣1️⃣ Nursing Care Plan", "Assessment → Nursing Diagnosis → Goals → Interventions → Rationale → Evaluation."),
-            ("1️⃣2️⃣ Nurse Responsibility", "Monitoring, medication safety, documentation, communication, education, escalation and emergency response."),
-            ("1️⃣3️⃣ Complications / Red flags", "Important complications, danger signs and when immediate escalation is required."),
-            ("1️⃣4️⃣ NORCET High-Yield / Case Scenario", "Priority action, ABC/safety, first nursing intervention, common traps and case-based revision points."),
+            ("1️⃣2️⃣ Nurse Responsibility", "Monitoring, documentation, communication, safety and escalation."),
+            ("1️⃣3️⃣ Complications / Red flags", "Verified complications and danger signs."),
+            ("1️⃣4️⃣ NORCET High-Yield / Case Scenario", "Priority action, safety, common traps and case-based revision.")
         ]
     else:
         framework = [
-            ("1️⃣ Definition / Introduction", f"{topic}: concept, scope and key terminology."),
-            ("2️⃣ Core principles / Classification", "Important classifications, principles, components and relationships."),
-            ("3️⃣ Process / Mechanism", "Step-by-step process, mechanism or workflow."),
-            ("4️⃣ Important features", "Key characteristics, signs/features, examples and distinguishing points."),
-            ("5️⃣ Assessment / Evaluation", "Methods, tools, measurements, interpretation and common findings."),
-            ("6️⃣ Application / Management", "Practical application, planning, implementation and problem-solving."),
-            ("7️⃣ Safety / Legal / Ethical points", "Patient safety, professional responsibility, ethics and legal considerations where relevant."),
-            ("8️⃣ Nursing application", "How the nurse applies the concept in clinical/educational/community practice."),
-            ("9️⃣ Patient / Community Education", "Communication, counselling, prevention and health-promotion points."),
-            ("🔟 Nursing Care Plan", "Assessment → Nursing Diagnosis → Goals → Interventions → Rationale → Evaluation where applicable."),
-            ("1️⃣1️⃣ Nurse Responsibility", "Monitoring, documentation, coordination, education and escalation."),
-            ("1️⃣2️⃣ NORCET High-Yield", "Definitions, differences, common MCQ traps, priority questions and case-scenario points."),
+            ("1️⃣ Definition / Introduction", f"{topic}: concept, scope and terminology."),
+            ("2️⃣ Core principles / Classification", "Important classifications and principles."),
+            ("3️⃣ Process / Mechanism", "Step-by-step process or mechanism."),
+            ("4️⃣ Important features", "Key characteristics and examples."),
+            ("5️⃣ Assessment / Evaluation", "Methods, tools and interpretation."),
+            ("6️⃣ Application / Management", "Practical application and problem-solving."),
+            ("7️⃣ Safety / Legal / Ethical points", "Relevant safety and professional points."),
+            ("8️⃣ Nursing application", "Clinical/educational/community application."),
+            ("9️⃣ Patient / Community Education", "Communication, counselling and prevention."),
+            ("🔟 Nursing Care Plan", "Assessment → Nursing Diagnosis → Goals → Interventions → Rationale → Evaluation."),
+            ("1️⃣1️⃣ Nurse Responsibility", "Monitoring, documentation and education."),
+            ("1️⃣2️⃣ NORCET High-Yield", "Definitions, differences and case-based points.")
         ]
-    txt = f"<b>📖 TOPIC</b>\n<b>{escape(topic)}</b>\n\n<b>📚 Subject:</b> {escape(subject)}\n\n"
-    txt += "\n\n".join(f"<b>{escape(h)}</b>\n{escape(v)}" for h,v in framework)
-    txt += "\n\n<b>🎯 QUICK REVISION</b>\n• Definition/keyword first\n• Cause → mechanism → finding → diagnosis → management link\n• Nursing priority + safety point\n• One case-scenario application\n• Revise red flags and common NORCET traps"
-    txt += "\n\n<b>📚 AUTHENTIC SOURCE STANDARD</b>\n"
-    txt += "• INC — curriculum, competencies & nursing standards\n"
-    txt += "• AIIMS — NORCET examination scope/notifications\n"
-    txt += "• MoHFW / ICMR / NCDC — Indian health & clinical guidance\n"
-    txt += "• WHO / recognised specialty guidelines — evidence-based recommendations\n"
-    txt += "• Standard nursing/medical textbooks — foundational concepts\n\n"
-    txt += "<b>⚠️ AUTHENTICITY RULE</b>\nNo fabricated facts, doses, cut-offs or treatment claims. If a fact cannot be verified from an appropriate source, the bot must mark it for verification rather than presenting it as confirmed."
+    txt = f"<b>📖 TOPIC</b>\\n<b>{escape(topic)}</b>\\n\\n📚 <b>Subject:</b> {escape(subject)}\\n\\n"
+    txt += "\\n\\n".join(f"<b>{escape(h)}</b>\\n{escape(v)}" for h,v in framework)
+    txt += "\\n\\n🎯 <b>QUICK REVISION</b>\\n🧠 Definition → mechanism → assessment → management → nursing priority"
+    txt += "\\n\\n📚 <b>AUTHENTIC SOURCE STANDARD</b>\\n🏥 INC • AIIMS • MoHFW • ICMR • NCDC • WHO • recognised guidelines/textbooks"
     return txt
 
 def norcet_subject_info(subject):
@@ -584,6 +608,12 @@ async def norcet_topic_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     topic = topics[topic_index]
     context.user_data["subject"] = subject
     context.user_data["norcet_subject_code"] = code
+    detailed = DETAILED_TOPIC_CONTENT.get(topic.strip().lower())
+    if detailed:
+        try:
+            await q.message.reply_animation(detailed["gif"], caption="🎬🩺 Visual study break — ab notes focus se padho! 📚✨")
+        except Exception:
+            pass
     await q.edit_message_text(
         norcet_topic_info(subject, topic),
         parse_mode=ParseMode.HTML,
