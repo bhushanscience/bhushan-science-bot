@@ -1444,7 +1444,9 @@ async def channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ================== ROUTER ==================
 async def msg_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message: return
-    uid = update.effective_user.id; touch_user(uid); u = get_user(uid)
+    uid = update.effective_user.id
+    log.info("📩 Incoming Telegram message: user=%s type=%s text=%r", uid, "photo" if update.message.photo else "text", (update.message.text or update.message.caption or "")[:120])
+    touch_user(uid); u = get_user(uid)
     if u and u.get('is_banned'): await update.message.reply_text("🚫 Banned."); return
     txt = (update.message.text or "").strip(); aw = context.user_data.get('awaiting')
     if aw == 'custom_minutes': await custom_minutes_msg(update, context); return
@@ -1538,7 +1540,9 @@ def main():
         app.add_handler(MessageHandler(filters.ChatType.CHANNEL, channel_post))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_router))
         app.add_handler(MessageHandler(filters.PHOTO, msg_router))
-        log.info("🤖 Bhushan Science Bot v3.2 starting...")
+        me = asyncio.run(app.bot.get_me())
+        log.info("🤖 Bhushan Science Bot v3.2 starting as @%s (id=%s)", me.username, me.id)
+        log.info("📡 Telegram update handlers registered; waiting for incoming updates...")
         # Render-safe Telegram WEBHOOK mode.
         # Webhooks and getUpdates are mutually exclusive, so this removes the
         # recurring HTTP 409 conflict caused by competing polling instances.
@@ -1562,8 +1566,10 @@ def main():
             close_loop=False,
         )
     except Exception as e:
-        log.error(f"❌ BOT CRASHED: {e}")
-        traceback.print_exc()
+        log.exception("❌ BOT CRASHED during startup: %s", e)
+        # Do not swallow startup failures. Render must see a failed process
+        # so it can restart the service instead of leaving a dead bot running.
+        raise
 
 if __name__ == "__main__":
     main()
