@@ -739,16 +739,30 @@ async def exam_countdown_daily(context):
         except: pass
 
 def reschedule_jobs(app):
+    # python-telegram-bot only creates JobQueue when the [job-queue]
+    # extra is installed. Keep startup safe even if a stale Render build
+    # is ever deployed without that optional dependency.
+    job_queue = app.job_queue
+    if job_queue is None:
+        log.error("❌ JobQueue unavailable. Install python-telegram-bot[job-queue].")
+        return
+
     for name in ["daily_quote", "daily_meme", "daily_quiz", "exam_countdown"]:
-        for j in app.job_queue.get_jobs_by_name(name): j.schedule_removal()
+        for j in job_queue.get_jobs_by_name(name):
+            j.schedule_removal()
+
     def pt(s):
         try: h, m = s.split(":"); return dtime(int(h), int(m), tzinfo=IST)
         except: return None
     qt = pt(get_setting('quote_time', '07:00')); mt = pt(get_setting('meme_time', '21:00')); zt = pt(get_setting('quiz_time', '20:00'))
-    if qt: app.job_queue.run_daily(daily_quote_job, time=qt, name="daily_quote")
-    if mt: app.job_queue.run_daily(daily_meme_job, time=mt, name="daily_meme")
-    if zt: app.job_queue.run_daily(daily_quiz_job, time=zt, name="daily_quiz")
-    app.job_queue.run_daily(exam_countdown_daily, time=dtime(8, 0, tzinfo=IST), name="exam_countdown")
+    if qt: job_queue.run_daily(daily_quote_job, time=qt, name="daily_quote")
+    if mt: job_queue.run_daily(daily_meme_job, time=mt, name="daily_meme")
+    if zt: job_queue.run_daily(daily_quiz_job, time=zt, name="daily_quiz")
+    job_queue.run_daily(
+        exam_countdown_daily,
+        time=dtime(8, 0, tzinfo=IST),
+        name="exam_countdown",
+    )
 
 # ================== CHANNEL POST ==================
 async def channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -790,6 +804,12 @@ async def post_init(app):
 
 def main():
     try:
+        if not BOT_TOKEN:
+            raise RuntimeError("BOT_TOKEN environment variable is not set")
+
+        if OWNER_ID <= 0:
+            log.warning("⚠️ OWNER_ID is not set; owner-only admin commands will be unavailable")
+
         threading.Thread(target=run_web, daemon=True).start()
         log.info("🌐 Web server thread started")
         init_db()
