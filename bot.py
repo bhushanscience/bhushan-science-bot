@@ -241,11 +241,11 @@ DETAILED_TOPIC_CONTENT = {
 def norcet_topic_info(subject, topic):
     detailed = DETAILED_TOPIC_CONTENT.get(topic.strip().lower())
     if detailed:
-        txt = f"<b>📖 TOPIC — {escape(topic)}</b>\\n\\n📚 <b>Subject:</b> {escape(subject)}\\n🩺 <b>Detailed Clinical Notes</b>\\n\\n"
-        txt += "\\n\\n".join(f"<b>{escape(h)}</b>\\n{escape(v)}" for h, v in detailed["sections"])
-        txt += "\\n\\n🎯 <b>QUICK REVISION</b>\\n🧠 3 Ps → Power • Passenger • Passage\\n❤️ Correlate maternal + fetal status with labour progress.\\n🚨 Red flags → assess, escalate and document promptly."
-        txt += f"\\n\\n📚 <b>AUTHENTIC SOURCE</b>\\n🌐 {escape(detailed['source'])}\\n🔗 {escape(detailed['source_url'])}"
-        txt += "\\n⚠️ Educational content; patient-specific management follows the treating team's/local protocol."
+        txt = f"<b>📖 TOPIC — {escape(topic)}</b>\n\n📚 <b>Subject:</b> {escape(subject)}\n🩺 <b>Detailed Clinical Notes</b>\n\n"
+        txt += "\n\n".join(f"<b>{escape(h)}</b>\n{escape(v)}" for h, v in detailed["sections"])
+        txt += "\n\n🎯 <b>QUICK REVISION</b>\n🧠 3 Ps → Power • Passenger • Passage\n❤️ Correlate maternal + fetal status with labour progress.\n🚨 Red flags → assess, escalate and document promptly."
+        txt += f"\n\n📚 <b>AUTHENTIC SOURCE</b>\n🌐 {escape(detailed['source'])}\n🔗 {escape(detailed['source_url'])}"
+        txt += "\n⚠️ Educational content; patient-specific management follows the treating team's/local protocol."
         return txt
 
     clinical = any(x in subject.lower() for x in [
@@ -286,10 +286,10 @@ def norcet_topic_info(subject, topic):
             ("1️⃣1️⃣ Nurse Responsibility", "Monitoring, documentation and education."),
             ("1️⃣2️⃣ NORCET High-Yield", "Definitions, differences and case-based points.")
         ]
-    txt = f"<b>📖 TOPIC</b>\\n<b>{escape(topic)}</b>\\n\\n📚 <b>Subject:</b> {escape(subject)}\\n\\n"
-    txt += "\\n\\n".join(f"<b>{escape(h)}</b>\\n{escape(v)}" for h,v in framework)
-    txt += "\\n\\n🎯 <b>QUICK REVISION</b>\\n🧠 Definition → mechanism → assessment → management → nursing priority"
-    txt += "\\n\\n📚 <b>AUTHENTIC SOURCE STANDARD</b>\\n🏥 INC • AIIMS • MoHFW • ICMR • NCDC • WHO • recognised guidelines/textbooks"
+    txt = f"<b>📖 TOPIC</b>\n<b>{escape(topic)}</b>\n\n📚 <b>Subject:</b> {escape(subject)}\n\n"
+    txt += "\n\n".join(f"<b>{escape(h)}</b>\n{escape(v)}" for h,v in framework)
+    txt += "\n\n🎯 <b>QUICK REVISION</b>\n🧠 Definition → mechanism → assessment → management → nursing priority"
+    txt += "\n\n📚 <b>AUTHENTIC SOURCE STANDARD</b>\n🏥 INC • AIIMS • MoHFW • ICMR • NCDC • WHO • recognised guidelines/textbooks"
     return txt
 
 def norcet_subject_info(subject):
