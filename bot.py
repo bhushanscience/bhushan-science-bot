@@ -2,7 +2,7 @@
 # BHUSHAN SCIENCE BOT - v3.2 (Render Perfect + Logged)
 # ============================================================
 
-import os, sqlite3, logging, asyncio, random, threading, traceback, time, re
+import os, sqlite3, logging, asyncio, random, threading, traceback, time, re, base64, json
 from html import escape
 from urllib.request import Request, urlopen
 from datetime import datetime, timedelta, date, time as dtime
@@ -642,6 +642,47 @@ async def finish_session(context, uid, sid, asked, correct):
     add_points(uid, total_pts, f"Session #{sid} complete")
     await context.bot.send_message(uid, f"{MODES[get_user_mode(uid)]['reward']}\n\n✅ Sahi: {correct}/{asked}\n💎 +{total_pts} points\n🔥 Streak: {streak} din\n⏱ Total: {total_min} min", parse_mode=ParseMode.HTML, reply_markup=main_menu_kb())
 
+# ================== AI DOUBT SCANNER ==================
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
+OPENAI_VISION_MODEL = os.getenv("OPENAI_VISION_MODEL", "gpt-4.1-mini").strip()
+
+async def ai_doubt_answer(image_bytes=None, question_text=""):
+    if not OPENAI_API_KEY: return None
+    prompt = """You are Bhushan Science Bot's nursing/science doubt-solving AI.
+Read the student's question/image carefully and answer in clear Hinglish/English.
+For nursing/medical questions, use: Definition; Causes/Risk factors; Pathophysiology; Signs & Symptoms; Diagnosis/Investigations; Medical management; Surgical management; Pharmacological management; Nursing management; Lifestyle/Diet/Prevention; Nursing Care Plan; Nurse Responsibilities; Complications/Red flags; NORCET high-yield points.
+For non-medical questions, answer directly. If image is blurry/unreadable, say so instead of inventing text. Do not claim a diagnosis for a real patient from an image. For urgent symptoms advise medical evaluation."""
+    content=[{"type":"text","text":prompt}]
+    if question_text and question_text != "[Photo]": content.append({"type":"text","text":"Student question: "+question_text})
+    if image_bytes:
+        b64=base64.b64encode(image_bytes).decode("ascii")
+        content.append({"type":"image_url","image_url":{"url":"data:image/jpeg;base64,"+b64,"detail":"high"}})
+    payload={"model":OPENAI_VISION_MODEL,"messages":[{"role":"system","content":"Accurate nursing/science tutor. Never fabricate unreadable information."},{"role":"user","content":content}],"temperature":0.2,"max_tokens":3000}
+    def call():
+        req=Request("https://api.openai.com/v1/chat/completions",data=json.dumps(payload).encode(),headers={"Authorization":"Bearer "+OPENAI_API_KEY,"Content-Type":"application/json"},method="POST")
+        with urlopen(req,timeout=90) as resp: return json.loads(resp.read().decode())
+    try:
+        data=await asyncio.to_thread(call)
+        return data["choices"][0]["message"]["content"].strip()
+    except Exception as e:
+        log.exception("AI doubt scan failed: %s", e); return None
+
+async def ai_doubt_from_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not OPENAI_API_KEY:
+        await update.message.reply_text("⚠️ AI scanner configured nahi hai. Render Environment me OPENAI_API_KEY set karo.")
+        return
+    photo=update.message.photo[-1]
+    caption=(update.message.caption or "").strip()
+    await update.message.reply_text("🔎 Photo scan ho rahi hai...\n🧠 AI answer prepare kar raha hai.")
+    try:
+        tg_file=await context.bot.get_file(photo.file_id)
+        image_bytes=bytes(await tg_file.download_as_bytearray())
+        answer=await ai_doubt_answer(image_bytes, caption or "[Photo]")
+        await update.message.reply_text("🤖 AI Answer\n\n"+answer[:4000] if answer else "⚠️ Answer generate nahi ho paya. Clear photo bhejo.")
+    except Exception as e:
+        log.exception("Photo doubt processing failed: %s", e)
+        await update.message.reply_text("⚠️ Photo scan me problem hui. Clear image bhejo ya doubt text me likho.")
+
 # ================== DOUBT ==================
 async def doubt_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['awaiting'] = 'doubt_photo'
@@ -650,9 +691,15 @@ async def doubt_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def doubt_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get('awaiting') != 'doubt_photo': return
     uid = update.effective_user.id
-    if update.message.photo: fid = update.message.photo[-1].file_id; txt = update.message.caption or "[Photo]"
-    else: fid = None; txt = update.message.text
+    if update.message.photo:
+        fid = update.message.photo[-1].file_id; txt = update.message.caption or "[Photo]"
+        context.user_data['awaiting'] = None
+        if give_badge(uid, 'doubter'): await context.bot.send_message(uid, "🎉 Badge: ❓ Curious Mind!")
+        await ai_doubt_from_photo(update, context)
+        return
+    fid = None; txt = update.message.text
     answer = search_answer(txt)
+    if not answer and OPENAI_API_KEY: answer = await ai_doubt_answer(None, txt)
     c = db(); c.execute("INSERT INTO doubts(user_id,question_text,photo_file_id,answer,status) VALUES(?,?,?,?,?)", (uid, txt, fid, answer, 'answered' if answer else 'pending')); c.commit(); c.close()
     context.user_data['awaiting'] = None
     if give_badge(uid, 'doubter'): await context.bot.send_message(uid, "🎉 Badge: ❓ Curious Mind!")
