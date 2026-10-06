@@ -93,8 +93,7 @@ NORCET_BSC_SUBJECTS = [
     "Midwifery / Obstetrics & Gynecology Nursing I", "Community Health Nursing II",
     "Nursing Research & Statistics", "Midwifery / Obstetrics & Gynecology Nursing II",
     "Internship / Intensive Practicum / Residency Posting",
-    "Mandatory modules: First Aid, BCLS, Health Assessment, Palliative Care,
-    "Essential Newborn Care (ENBC), FBNBC, IMNCI, PLS/PALS, Safe Delivery",
+    "Mandatory Modules: First Aid, BCLS, Health Assessment, Palliative Care, Essential Newborn Care (ENBC), FBNBC, IMNCI, PLS/PALS, Safe Delivery",
 ]
 
 NORCET_GNM_SUBJECTS = [
