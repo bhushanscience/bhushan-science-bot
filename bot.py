@@ -74,6 +74,24 @@ MODES = {
 # General Knowledge & Aptitude for Stage I and nursing-course syllabus for the
 # nursing portion.
 INC_BSC_SYLLABUS_URL = "https://indiannursingcouncil.org/uploads/pdf/162581803399632881260e803b133fde.pdf"
+# Evidence/source policy for medical and nursing content.
+AUTHENTIC_SOURCE_HIERARCHY = [
+    ("INC", "Nursing curriculum, competencies, syllabus and professional standards", "https://www.indiannursingcouncil.org/"),
+    ("AIIMS", "NORCET notifications, examination scheme and eligibility", "https://www.aiimsexams.ac.in/"),
+    ("MoHFW", "Government of India clinical/public-health programmes and guidance", "https://www.mohfw.gov.in/"),
+    ("WHO", "Evidence-based clinical/public-health guidelines and recommendations", "https://www.who.int/publications/who-guidelines"),
+    ("ICMR", "Indian biomedical/clinical research guidance and standards", "https://www.icmr.gov.in/"),
+    ("NCDC", "Indian communicable-disease/public-health guidance", "https://ncdc.mohfw.gov.in/"),
+    ("Standard textbooks/guidelines", "Established nursing/medical textbooks and current specialty guidelines", ""),
+]
+AUTHENTIC_CONTENT_RULES = [
+    "Do not invent clinical facts, drug doses, contraindications, diagnostic cut-offs or treatment recommendations.",
+    "Separate syllabus/index information from clinical management recommendations.",
+    "Prefer current Indian official guidance when applicable; use WHO/specialty guidance when appropriate.",
+    "If authoritative evidence is unavailable or conflicting, explicitly say that verification is required.",
+    "For patient-specific questions, provide educational information and advise qualified clinical assessment rather than diagnosing.",
+]
+
 INC_GNM_SYLLABUS_URL = "https://indiannursingcouncil.org/uploads/pdf/16777602713172325806400970f3f105.pdf"
 
 NORCET_BSC_SUBJECTS = [
@@ -241,8 +259,13 @@ def norcet_topic_info(subject, topic):
     txt = f"<b>📖 TOPIC</b>\n<b>{escape(topic)}</b>\n\n<b>📚 Subject:</b> {escape(subject)}\n\n"
     txt += "\n\n".join(f"<b>{escape(h)}</b>\n{escape(v)}" for h,v in framework)
     txt += "\n\n<b>🎯 QUICK REVISION</b>\n• Definition/keyword first\n• Cause → mechanism → finding → diagnosis → management link\n• Nursing priority + safety point\n• One case-scenario application\n• Revise red flags and common NORCET traps"
-    txt += "\n\n<b>📌 SOURCE STANDARD</b>\nINC curriculum + official exam guidance + recognised evidence-based clinical guidelines/textbooks.\n"
-    txt += "⚠️ Topic facts should be verified against the cited/approved source before being treated as clinical advice."
+    txt += "\n\n<b>📚 AUTHENTIC SOURCE STANDARD</b>\n"
+    txt += "• INC — curriculum, competencies & nursing standards\n"
+    txt += "• AIIMS — NORCET examination scope/notifications\n"
+    txt += "• MoHFW / ICMR / NCDC — Indian health & clinical guidance\n"
+    txt += "• WHO / recognised specialty guidelines — evidence-based recommendations\n"
+    txt += "• Standard nursing/medical textbooks — foundational concepts\n\n"
+    txt += "<b>⚠️ AUTHENTICITY RULE</b>\nNo fabricated facts, doses, cut-offs or treatment claims. If a fact cannot be verified from an appropriate source, the bot must mark it for verification rather than presenting it as confirmed."
     return txt
 
 def norcet_subject_info(subject):
