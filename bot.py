@@ -285,7 +285,7 @@ def init_db():
     cur.execute('''CREATE TABLE IF NOT EXISTS daily_quiz(id INTEGER PRIMARY KEY AUTOINCREMENT, quiz_date DATE UNIQUE, question TEXT, option_a TEXT, option_b TEXT, option_c TEXT, option_d TEXT, correct_option TEXT, explanation TEXT)''')
     cur.execute('''CREATE TABLE IF NOT EXISTS quiz_answers(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, quiz_date DATE, chosen TEXT, correct INTEGER, UNIQUE(user_id, quiz_date))''')
     cur.execute('''CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT)''')
-    defaults = {'force_join_enabled': '0', 'reward_points': '10', 'punishment_points': '20', 'nag_message_count': '5', 'daily_points_target': '50', 'bot_name': 'Bhushan Science', 'welcome_msg': 'Padhai karo!', 'quote_time': '07:00', 'meme_time': '21:00', 'quiz_time': '20:00', 'break_reminder': '1'}
+    defaults = {'force_join_enabled': '0', 'force_join_configured': '0', 'reward_points': '10', 'punishment_points': '20', 'nag_message_count': '5', 'daily_points_target': '50', 'bot_name': 'Bhushan Science', 'welcome_msg': 'Padhai karo!', 'quote_time': '07:00', 'meme_time': '21:00', 'quiz_time': '20:00', 'break_reminder': '1'}
     for k, v in defaults.items(): cur.execute("INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)", (k, v))
     try:
         cur.execute("ALTER TABLE users ADD COLUMN last_active TIMESTAMP")
@@ -336,8 +336,10 @@ def get_user_mode(uid): u = get_user(uid); return (u.get('mode') if u else None)
 
 # ================== FORCE JOIN ==================
 async def check_joined(context, user_id):
-    # Force-join is disabled by default; users can access /start directly.
-    if get_setting('force_join_enabled') != '1': return True
+    # Safety: legacy DBs may contain force_join_enabled=1 from an older setup.
+    # Only an explicit admin ON action may activate force-join.
+    if get_setting('force_join_configured', '0') != '1': return True
+    if get_setting('force_join_enabled', '0') != '1': return True
     chs = all_channels()
     if not chs: return True
     for ch in chs:
@@ -856,15 +858,22 @@ async def channels_panel(q, context):
     else: txt += "Koi nahi.\n"
     txt += "\n/addchannel <id> | name | link\n/delchannel <id>"
     btns = []
-    if get_setting('force_join_enabled') == '1': btns.append([InlineKeyboardButton("🔓 Force Join OFF", callback_data="a_fjoff")])
-    else: btns.append([InlineKeyboardButton("🔒 Force Join ON", callback_data="a_fjon")])
+    if get_setting('force_join_configured', '0') == '1' and get_setting('force_join_enabled', '0') == '1':
+        btns.append([InlineKeyboardButton("🔓 Force Join OFF", callback_data="a_fjoff")])
+    else:
+        btns.append([InlineKeyboardButton("🔒 Force Join ON", callback_data="a_fjon")])
     btns.append([InlineKeyboardButton("🔙 Back", callback_data="a_menu")])
     await q.edit_message_text(txt, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(btns))
 
 async def fj_toggle(update, context):
     q = update.callback_query; await q.answer()
-    if q.data == "a_fjon": set_setting('force_join_enabled', '1')
-    else: set_setting('force_join_enabled', '0')
+    if q.data == "a_fjon":
+        # Explicit admin action is the only way to activate force-join.
+        set_setting('force_join_configured', '1')
+        set_setting('force_join_enabled', '1')
+    else:
+        set_setting('force_join_enabled', '0')
+        set_setting('force_join_configured', '0')
     await channels_panel(q, context)
 
 async def settings_panel(q, context):
