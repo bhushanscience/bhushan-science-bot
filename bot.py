@@ -380,7 +380,16 @@ def check_badges(uid):
     if u['quiz_correct'] >= 10: give_badge(uid, 'quiz_master')
     used = [x for x in (u.get('techniques_used') or '').split(',') if x]
     if len(set(used)) >= len(TECHNIQUES): give_badge(uid, 'technique_master')
-def get_user_mode(uid): u = get_user(uid); return (u.get('mode') if u else None) or 'serious'
+def get_user_mode(uid):
+    u = get_user(uid)
+    mode = (u.get('mode') if u else None) or 'serious'
+    # Normalize legacy/invalid database values so old users never crash
+    # a study session because MODES[mode] does not exist.
+    if mode not in MODES:
+        mode = 'serious'
+        if u:
+            update_user(uid, mode=mode)
+    return mode
 
 # ================== FORCE JOIN ==================
 async def check_joined(context, user_id):
@@ -627,7 +636,10 @@ async def mode_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🎭 <b>Apna Mode Chuno</b>", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(btns))
 
 async def set_mode_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); mode = q.data.replace("setm_", "")
+    q = update.callback_query; await q.answer()
+    mode = q.data.replace("setm_", "")
+    if mode not in MODES:
+        mode = 'serious'
     update_user(q.from_user.id, mode=mode)
     await q.edit_message_text(f"✅ Mode: <b>{MODES[mode]['name']}</b>", parse_mode=ParseMode.HTML)
 
