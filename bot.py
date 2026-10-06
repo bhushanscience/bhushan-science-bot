@@ -1460,8 +1460,8 @@ def main():
         if OWNER_ID <= 0:
             log.warning("⚠️ OWNER_ID is not set; owner-only admin commands will be unavailable")
 
-        threading.Thread(target=run_web, daemon=True).start()
-        log.info("🌐 Web server thread started")
+        # Telegram webhook owns the Render HTTP port; do not start a second
+        # Flask server on the same port.
         init_db()
         app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
         app.add_error_handler(bot_error_handler)
