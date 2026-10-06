@@ -2,7 +2,8 @@
 # BHUSHAN SCIENCE BOT - v3.2 (Render Perfect + Logged)
 # ============================================================
 
-import os, sqlite3, logging, asyncio, random, threading, traceback, time
+import os, sqlite3, logging, asyncio, random, threading, traceback, time, re
+from urllib.request import Request, urlopen
 from datetime import datetime, timedelta, date, time as dtime
 from telegram import (
     Update, InlineKeyboardButton, InlineKeyboardMarkup,
@@ -114,6 +115,96 @@ NORCET_SUBJECT_MAP = {}
 for _i, _s in enumerate(NORCET_BSC_SUBJECTS): NORCET_SUBJECT_MAP[f"B{_i}"] = _s
 for _i, _s in enumerate(NORCET_GNM_SUBJECTS): NORCET_SUBJECT_MAP[f"G{_i}"] = _s
 
+# ================== SUBJECT INDEX / HIGH-YIELD CONTENT ==================
+NORCET_INDEX_OVERRIDES = {
+    "Communicative English": ["Grammar & sentence structure","Tenses & subject-verb agreement","Articles, prepositions & conjunctions","Vocabulary, synonyms & antonyms","Comprehension","Medical terminology","Precis / communication","Common error spotting"],
+    "Applied Anatomy": ["Anatomical terminology & planes","Cells, tissues & membranes","Skeletal system & joints","Muscular system","Cardiovascular system","Respiratory system","Digestive system","Urinary system","Nervous system & special senses","Endocrine system","Reproductive system","Lymphatic system"],
+    "Applied Physiology": ["Cell physiology & homeostasis","Blood & immunity","Cardiac cycle & circulation","Respiratory physiology","GIT & digestion","Renal physiology & fluid balance","Nervous system","Endocrine physiology","Reproductive physiology","Temperature regulation & exercise"],
+    "Applied Sociology": ["Society & culture","Socialization","Family & marriage","Social groups","Social stratification","Community & social change","Health and illness in society","Indian social problems","Social determinants of health"],
+    "Applied Psychology": ["Introduction to psychology","Learning","Memory","Intelligence","Motivation & emotion","Personality","Developmental psychology","Stress & coping","Psychological assessment","Mental health basics"],
+    "Nursing Foundations I": ["Nursing profession & history","Nursing process","Basic needs & comfort","Admission, transfer & discharge","Vital signs","Hygiene & personal care","Bed making & positioning","Safety & mobility","Infection prevention","Documentation & reporting","Basic procedures & asepsis"],
+    "Applied Biochemistry": ["Carbohydrates","Proteins & amino acids","Lipids","Enzymes","Vitamins & minerals","Nucleic acids","Metabolism","Acid-base balance","Clinical biochemistry","Liver & renal function tests"],
+    "Applied Nutrition and Dietetics": ["Nutrients & energy","Balanced diet","Therapeutic diets","Malnutrition","Infant & child nutrition","Pregnancy & lactation nutrition","Enteral & parenteral nutrition","Diet planning","Food hygiene","Nutrition education"],
+    "Nursing Foundations II": ["Health assessment","Physical examination","Pain assessment","Medication basics","Fluid & electrolyte care","Oxygen therapy","Wound care","Specimen collection","Perioperative basics","Emergency nursing basics"],
+    "Health/Nursing Informatics & Technology": ["Health information systems","Electronic health records","Nursing documentation","Data privacy & security","Telehealth","Digital health tools","Evidence retrieval","Basic statistics/data handling","Technology in patient safety"],
+    "Applied Microbiology & Infection Control including Safety": ["Microorganisms","Bacteria, viruses, fungi & parasites","Chain of infection","Standard precautions","Hand hygiene","PPE","Sterilization & disinfection","Biomedical waste","Healthcare-associated infections","Isolation precautions","Needle-stick prevention"],
+    "Pharmacology I": ["General pharmacology","Pharmacokinetics & pharmacodynamics","Routes of administration","Adverse drug reactions","Drug interactions","Autonomic drugs","CNS drugs","Cardiovascular drugs","Respiratory drugs","GI drugs","Safe medication administration"],
+    "Pathology I": ["Cell injury","Inflammation","Healing & repair","Neoplasia","Hemodynamic disorders","Infectious disease pathology","Hematology basics","Laboratory diagnosis","Specimen handling"],
+    "Adult Health (Medical-Surgical) Nursing I with Integrated Pathophysiology": ["Health assessment of adults","Respiratory disorders","Cardiovascular disorders","GI & hepatobiliary disorders","Renal & urinary disorders","Neurological disorders","Endocrine disorders","Musculoskeletal disorders","Perioperative nursing","Emergency & critical care basics","Fluid/electrolyte management"],
+    "Pharmacology II": ["Antimicrobials","Endocrine drugs","Chemotherapy","Blood & coagulation drugs","Emergency drugs","Obstetric drugs","Paediatric considerations","Drug calculations","High-alert medications","Fundamentals of prescribing"],
+    "Pathology II & Genetics": ["Clinical pathology","Hematology","Immunopathology","Organ-system pathology","Genetic principles","Chromosomal disorders","Genetic counselling","Prenatal diagnosis","Laboratory interpretation"],
+    "Adult Health Nursing II with Integrated Pathophysiology including Geriatric Nursing": ["Oncology nursing","Neurological nursing","Renal nursing","Endocrine nursing","Musculoskeletal nursing","Burns & wounds","Geriatric assessment","Dementia & delirium","Palliative care","Rehabilitation","Long-term care"],
+    "Professionalism, Professional Values & Ethics including Bioethics": ["Professional identity","Nursing code of ethics","Patient rights","Confidentiality","Consent","Legal responsibilities","Ethical principles","Bioethics","Professional boundaries","Incident reporting"],
+    "Child Health Nursing I": ["Growth & development","Paediatric assessment","Newborn care","Nutrition in children","Immunization","Common childhood illnesses","Respiratory disorders","GI disorders","Fluid/electrolyte care","Family-centred care"],
+    "Mental Health Nursing I": ["Mental health concepts","Therapeutic communication","Mental status examination","Psychiatric history","Anxiety disorders","Mood disorders","Schizophrenia","Substance use","Suicide risk","Psychiatric emergencies"],
+    "Community Health Nursing I including Environmental Science & Epidemiology": ["Community assessment","Primary health care","Health promotion","Epidemiology","Screening","Communicable diseases","Environmental sanitation","Water & air pollution","Waste management","National health programmes"],
+    "Educational Technology / Nursing Education": ["Teaching-learning process","Learning theories","Lesson planning","Teaching methods","AV aids","Clinical teaching","Evaluation","Curriculum basics","Student guidance"],
+    "Introduction to Forensic Nursing & Indian Laws": ["Forensic nursing role","Medico-legal cases","Evidence preservation","Injury documentation","Consent & confidentiality","Death & dying","Sexual assault care","Poisoning basics","Indian legal framework","Court testimony"],
+    "Child Health Nursing II": ["Paediatric emergencies","Congenital disorders","Neurological disorders","Cardiac disorders","Renal disorders","Endocrine disorders","Oncology in children","Hematological disorders","Disability & rehabilitation","Paediatric critical care"],
+    "Mental Health Nursing II": ["Psychiatric therapies","Psychopharmacology","ECT","Behaviour therapy","Cognitive therapies","Child/adolescent psychiatry","Geriatric psychiatry","Community mental health","Rehabilitation","Psychiatric nursing care plans"],
+    "Nursing Management & Leadership": ["Management principles","Leadership styles","Staffing","Scheduling","Delegation","Supervision","Quality assurance","Nursing audit","Conflict management","Inventory management","Disaster management"],
+    "Midwifery / Obstetrics & Gynecology Nursing I": ["Reproductive anatomy","Antenatal care","Normal pregnancy","Labour & delivery","Partograph","Postnatal care","Newborn care","Breastfeeding","Family planning","Obstetric emergencies"],
+    "Community Health Nursing II": ["Community diagnosis","Family health nursing","Home visits","School health","Occupational health","National programmes","Maternal & child health","Epidemiological surveillance","Health education","Primary/secondary/tertiary care"],
+    "Nursing Research & Statistics": ["Research process","Research designs","Problem & objectives","Literature review","Sampling","Data collection","Validity & reliability","Descriptive statistics","Probability & tests","Research ethics"],
+    "Midwifery / Obstetrics and Gynecology (OBG) Nursing II": ["High-risk pregnancy","Hypertensive disorders","Diabetes in pregnancy","Obstetric haemorrhage","Abnormal labour","Operative obstetrics","Puerperal complications","Gynaecological disorders","Infertility","Family planning & reproductive health"],
+    "Midwifery / Obstetrics & Gynecology Nursing II": ["High-risk pregnancy","Hypertensive disorders","Diabetes in pregnancy","Obstetric haemorrhage","Abnormal labour","Operative obstetrics","Puerperal complications","Gynaecological disorders","Infertility","Family planning & reproductive health"],
+    "Internship / Intensive Practicum / Residency Posting": ["Clinical assessment","Medication safety","Infection control","Documentation","Patient education","Emergency response","Team communication","Care planning","Case presentation","Professional practice"],
+    "Mandatory Modules: First Aid, BCLS, Health Assessment, Palliative Care, Essential Newborn Care (ENBC), FBNBC, IMNCI, PLS/PALS, Safe Delivery": ["First Aid & emergency response","BCLS","Health assessment","Palliative care","Essential Newborn Care (ENBC)","Facility Based Newborn Care (FBNBC)","IMNCI","PLS/PALS concepts","Safe delivery practices"],
+    "Bio-Science: Anatomy & Physiology": ["Anatomical terminology","Cells & tissues","Skeletal & muscular systems","Cardiovascular system","Respiratory system","Digestive system","Urinary system","Nervous system","Endocrine system","Reproductive system"],
+    "Microbiology": ["Microorganisms","Bacteria","Viruses","Fungi","Parasites","Normal flora","Chain of infection","Specimen collection","Sterilization & disinfection","Infection prevention"],
+    "Behavioural Sciences: Psychology & Sociology": ["Psychology basics","Learning & memory","Personality","Motivation","Stress & coping","Society & culture","Family","Socialization","Social determinants of health"],
+    "Nursing Foundations / Fundamentals of Nursing": ["Nursing process","Vital signs","Hygiene","Bed making","Positioning","Asepsis","Infection control","Medication basics","Documentation","First aid"],
+    "First Aid": ["Primary survey","CPR/BLS basics","Bleeding & shock","Fractures","Burns","Poisoning","Choking","Seizures","Emergency transport","Disaster first response"],
+    "Community Health Nursing I": ["Community assessment","Primary health care","Health promotion","Family health","Communicable diseases","Maternal-child health","National programmes","Health education","Home visits"],
+    "Environmental Hygiene": ["Water sanitation","Air pollution","Waste disposal","Food hygiene","Housing","Vector control","Personal hygiene","Environmental health hazards"],
+    "Health Education & Communication Skills": ["Communication process","Therapeutic communication","Health education principles","Individual teaching","Group teaching","AV aids","Counselling","Barriers to communication"],
+    "Nutrition": ["Nutrients","Balanced diet","Deficiency diseases","Therapeutic diets","Infant nutrition","Pregnancy nutrition","Food hygiene","Meal planning"],
+    "English": ["Grammar","Tenses","Vocabulary","Comprehension","Sentence correction","Synonyms & antonyms","Medical terminology","Communication"],
+    "Computer Education": ["Computer basics","Operating systems","Word processing","Spreadsheets","Presentations","Internet & email","Health information systems","Data safety"],
+    "Medical-Surgical Nursing I": ["Assessment","Respiratory disorders","Cardiovascular disorders","GI disorders","Renal disorders","Neurological disorders","Endocrine disorders","Infection care","Perioperative care"],
+    "Medical-Surgical Nursing II": ["Oncology","Neurology","Renal","Endocrine","Musculoskeletal","Burns","Geriatric nursing","Critical care","Rehabilitation","Palliative care"],
+    "Mental Health Nursing": ["Mental health concepts","Therapeutic communication","MSE","Schizophrenia","Mood disorders","Anxiety","Substance use","Suicide prevention","Psychiatric emergencies"],
+    "Child Health Nursing": ["Growth & development","Newborn care","Immunization","Common childhood diseases","Nutrition","Paediatric emergencies","Congenital disorders","Family-centred care"],
+    "Midwifery": ["Pregnancy","Antenatal care","Labour","Partograph","Delivery","Postnatal care","Newborn care","Breastfeeding","Obstetric emergencies"],
+    "Gynaecological Nursing": ["Menstrual disorders","Reproductive tract infections","Infertility","Benign gynaecological disorders","Gynaecological cancers","Contraception","Menopause","Perioperative care"],
+    "Community Health Nursing II": ["Community diagnosis","Family health","Home visits","School health","Occupational health","National programmes","MCH","Surveillance","Health education"],
+    "Nursing Education": ["Teaching-learning","Lesson plan","Teaching methods","AV aids","Clinical teaching","Evaluation","Curriculum"],
+    "Introduction to Research": ["Research problem","Objectives","Literature review","Research designs","Sampling","Data collection","Analysis","Research ethics"],
+    "Professional Trends & Adjustment": ["Professional roles","Ethics","Registration","Career development","Stress management","Teamwork","Professional adjustment"],
+    "Nursing Administration & Ward Management": ["Ward organization","Staffing","Scheduling","Delegation","Supervision","Records","Inventory","Quality assurance","Leadership"],
+    "Clinical / Internship Training": ["Patient assessment","Nursing care plans","Medication safety","Infection control","Documentation","Emergency care","Patient education","Teamwork","Professional conduct"],
+}
+def norcet_subject_index(subject):
+    if subject in NORCET_INDEX_OVERRIDES: return NORCET_INDEX_OVERRIDES[subject]
+    s = subject.lower()
+    for key, topics in NORCET_INDEX_OVERRIDES.items():
+        if key.lower() in s or s in key.lower(): return topics
+    return ["Core concepts","Definitions & terminology","Assessment","Pathophysiology / principles","Nursing management","Patient safety","Common complications","Emergency care","Prevention & health education","NORCET high-yield revision"]
+
+def norcet_subject_info(subject):
+    topics = norcet_subject_index(subject)
+    index_text = "\n".join(f"{i+1}. {x}" for i, x in enumerate(topics))
+    important = [
+        "⭐ Definitions + classifications yaad rakho.",
+        "⭐ Assessment → priorities → intervention → evaluation.",
+        "⭐ Safety, infection control, medication safety aur emergency priorities par focus.",
+        "⭐ Case-based questions me ABC, vitals, red flags aur first action identify karo.",
+    ]
+    quote = random.choice([
+        "🔥 Aaj ka 30 minute kal ki tension kam karta hai.",
+        "🧠 Read less, recall more.",
+        "💪 Consistency boring hoti hai, result boring nahi.",
+        "😂 Notes kholne ka notification aa gaya… ab ignore mat karna.",
+        "😄 Coffee optional, revision compulsory.",
+    ])
+    return f"<b>📚 INDEX</b>\n{index_text}\n\n<b>⭐ IMPORTANT</b>\n" + "\n".join(important) + f"\n\n<b>💬 QUOTE / MEME</b>\n{quote}\n\n📌 INC curriculum + NORCET nursing-course level."
+
+def norcet_subject_info_kb(code):
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("▶️ Start Study", callback_data=f"nstart_{code}")],
+        [InlineKeyboardButton("🔙 Subject List", callback_data=f"nback_{code[:1]}")],
+    ])
+
 
 def norcet_track_kb():
     return InlineKeyboardMarkup([
@@ -167,10 +258,22 @@ def init_db():
     cur.execute('''CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT)''')
     defaults = {'force_join_enabled': '1', 'reward_points': '10', 'punishment_points': '20', 'nag_message_count': '5', 'daily_points_target': '50', 'bot_name': 'Bhushan Science', 'welcome_msg': 'Padhai karo!', 'quote_time': '07:00', 'meme_time': '21:00', 'quiz_time': '20:00', 'break_reminder': '1'}
     for k, v in defaults.items(): cur.execute("INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)", (k, v))
+    try:
+        cur.execute("ALTER TABLE users ADD COLUMN last_active TIMESTAMP")
+    except sqlite3.OperationalError:
+        pass
     cur.execute("INSERT OR IGNORE INTO admins(user_id,added_by) VALUES(?,?)", (OWNER_ID, OWNER_ID))
     for q, a in [("Padhai karne wale ke paas waqt nahi hota, aur na padhne wale ke paas bahane.", "Bhushan Science"), ("Success ka shortcut sirf mehnat aur consistency hai.", "Bhushan Science"), ("Jo aaj padhega, wahi kal topper banega.", "Bhushan Science")]:
         cur.execute("INSERT INTO quotes(text,author) SELECT ?,? WHERE NOT EXISTS(SELECT 1 FROM quotes)", (q, a))
     c.commit(); c.close()
+
+def touch_user(uid):
+    try:
+        c = sqlite3.connect(DB_FILE)
+        c.execute("UPDATE users SET last_active=CURRENT_TIMESTAMP WHERE user_id=?", (uid,))
+        c.commit(); c.close()
+    except Exception:
+        pass
 
 def db(): c = sqlite3.connect(DB_FILE); c.row_factory = sqlite3.Row; return c
 def get_setting(k, d=None): c = db(); r = c.execute("SELECT value FROM settings WHERE key=?", (k,)).fetchone(); c.close(); return r['value'] if r else d
@@ -245,6 +348,7 @@ def admin_menu_kb():
 # ================== START ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id; name = update.effective_user.first_name or "Student"
+    touch_user(uid)
     create_user(uid, name)
     if not await check_joined(context, uid): await force_join_message(update, context); return
     user = get_user(uid)
@@ -261,7 +365,7 @@ async def verify_join_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else: await q.edit_message_text("❌ Saare channels join karo.")
 
 async def class_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); cls = q.data.replace("cls_", "")
+    q = update.callback_query; await q.answer(); touch_user(q.from_user.id); cls = q.data.replace("cls_", "")
     update_user(q.from_user.id, user_class=cls)
     if cls == "NORCET":
         context.user_data['norcet_track'] = None
@@ -277,7 +381,7 @@ async def class_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(q.from_user.id, "Ab padhai shuru karo 👇", reply_markup=main_menu_kb())
 
 async def norcet_track_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer()
+    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
     track = q.data.replace("ntrack_", "")
     context.user_data['norcet_track'] = track
     name = "INC B.Sc Nursing 2020" if track == "B" else "INC GNM 3-Year"
@@ -291,13 +395,26 @@ async def norcet_track_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 async def norcet_subject_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer()
+    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
     code = q.data.replace("subn_", "")
     subject = NORCET_SUBJECT_MAP.get(code, "General Nursing")
     context.user_data['subject'] = subject
-    default = TECHNIQUES[context.user_data.get('technique', 'pomodoro')]['work'] * TECHNIQUES[context.user_data.get('technique', 'pomodoro')]['cycles']
+    context.user_data['norcet_subject_code'] = code
     await q.edit_message_text(
-        f"🇮🇳 <b>NORCET Subject:</b> {subject}\n\nKitni der?",
+        f"🇮🇳 <b>{subject}</b>\n\n{norcet_subject_info(subject)}",
+        parse_mode=ParseMode.HTML,
+        reply_markup=norcet_subject_info_kb(code)
+    )
+
+async def norcet_start_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
+    code = q.data.replace("nstart_", "")
+    subject = NORCET_SUBJECT_MAP.get(code, context.user_data.get('subject', 'General Nursing'))
+    context.user_data['subject'] = subject
+    default = TECHNIQUES[context.user_data.get('technique', 'pomodoro')]['work'] * TECHNIQUES[context.user_data.get('technique', 'pomodoro')]['cycles']
+    context.user_data['duration'] = default
+    await q.edit_message_text(
+        f"🇮🇳 <b>{subject}</b>\n\n⏱ Default: <b>{default} min</b>\n\nDuration choose karo:",
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton(f"Default ({default}m)", callback_data=f"dur_{default}"), InlineKeyboardButton("30 min", callback_data="dur_30")],
@@ -319,6 +436,7 @@ async def set_mode_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ================== PADHAI ==================
 async def padhai_shuru(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    touch_user(update.effective_user.id)
     if not await check_joined(context, update.effective_user.id): await force_join_message(update, context); return
     keys = list(TECHNIQUES.keys()); btns = []; row = []
     for k in keys:
@@ -328,7 +446,7 @@ async def padhai_shuru(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🎓 <b>Technique Chuno</b>", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(btns))
 
 async def technique_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); tech = q.data.replace("tech_", "")
+    q = update.callback_query; await q.answer(); touch_user(q.from_user.id); tech = q.data.replace("tech_", "")
     context.user_data['technique'] = tech; t = TECHNIQUES[tech]; total = t['work'] * t['cycles']
     user = get_user(q.from_user.id) or {}
     if user.get('user_class') == "NORCET":
@@ -349,19 +467,54 @@ async def subject_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await q.edit_message_text(f"Subject: <b>{sub}</b>\n\nKitni der?", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(f"Default ({default}m)", callback_data=f"dur_{default}"), InlineKeyboardButton("30 min", callback_data="dur_30")], [InlineKeyboardButton("1 ghanta", callback_data="dur_60"), InlineKeyboardButton("2 ghante", callback_data="dur_120")], [InlineKeyboardButton("3 ghante", callback_data="dur_180"), InlineKeyboardButton("Custom", callback_data="dur_custom")]]))
 
 async def duration_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); dur = q.data.replace("dur_", "")
-    if dur == "custom": context.user_data['awaiting'] = 'custom_minutes'; await q.edit_message_text("Kitne minute? Number bhejo:"); return
-    context.user_data['duration'] = int(dur); context.user_data['awaiting'] = 'study_photo'
-    await q.edit_message_text(f"⏱ <b>{dur} min</b>\n\nAb photo bhejo.", parse_mode=ParseMode.HTML)
+    q = update.callback_query; await q.answer(); touch_user(q.from_user.id); dur = q.data.replace("dur_", "")
+    if dur == "custom":
+        context.user_data['awaiting'] = 'custom_minutes'
+        await q.edit_message_text("Kitne minute? Number bhejo:")
+        return
+    context.user_data['duration'] = int(dur)
+    context.user_data['awaiting'] = None
+    await q.edit_message_text(f"⏱ <b>{dur} min</b>\n\n📚 Session start ho raha hai — photo ki zarurat nahi hai.", parse_mode=ParseMode.HTML)
+    await start_study_session(context, q.from_user.id)
 
 async def custom_minutes_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get('awaiting') != 'custom_minutes': return
+    touch_user(update.effective_user.id)
     try:
         dur = int(update.message.text.strip())
         if dur < 5 or dur > 1440: raise ValueError
-    except: await update.message.reply_text("❌ 5-1440 ke beech number:"); return
-    context.user_data['duration'] = dur; context.user_data['awaiting'] = 'study_photo'
-    await update.message.reply_text(f"⏱ <b>{dur} min</b>\n\nAb photo bhejo.", parse_mode=ParseMode.HTML)
+    except:
+        await update.message.reply_text("❌ 5-1440 ke beech number:")
+        return
+    context.user_data['duration'] = dur
+    context.user_data['awaiting'] = None
+    await update.message.reply_text(f"⏱ <b>{dur} min</b>\n\n📚 Session start ho raha hai — photo ki zarurat nahi hai.", parse_mode=ParseMode.HTML)
+    await start_study_session(context, update.effective_user.id)
+
+async def start_study_session(context: ContextTypes.DEFAULT_TYPE, uid):
+    sub = context.user_data.get('subject', 'General')
+    dur = int(context.user_data.get('duration', 30))
+    tech = context.user_data.get('technique', 'pomodoro')
+    mode = get_user_mode(uid)
+    c = db()
+    cur = c.execute("INSERT INTO sessions(user_id,subject,technique,mode,planned_minutes,start_time,photo_file_id,status) VALUES(?,?,?,?,?,?,?,?)",
+                    (uid, sub, tech, mode, dur, datetime.now(), None, 'running'))
+    sid = cur.lastrowid; c.commit(); c.close()
+    update_user(uid, current_session=sid); touch_user(uid)
+    u = get_user(uid); used = [x for x in (u.get('techniques_used') or '').split(',') if x]
+    if tech not in used: used.append(tech)
+    update_user(uid, techniques_used=','.join(used)); check_badges(uid)
+    context.user_data['session_id'] = sid
+    context.user_data['awaiting'] = None
+    t = TECHNIQUES[tech]
+    for cyc in range(t['cycles']):
+        delay_min = t['work'] * (cyc + 1) + t['break'] * cyc
+        if delay_min < dur:
+            context.job_queue.run_once(break_msg_job, delay_min * 60, chat_id=uid, data={'sid': sid, 'cycle': cyc + 1, 'mode': mode})
+    context.job_queue.run_once(session_reminder, dur * 60, chat_id=uid, data={'sid': sid})
+    context.job_queue.run_once(nag_check, (dur + 5) * 60, chat_id=uid, data={'sid': sid})
+    await context.bot.send_message(uid, f"✅ <b>Session #{sid}</b>\n\n{t['name']} | {sub} | {dur} min\n\n{MODES[mode]['start']}\n\n📌 Index + important points dekhne ke baad focused study karo.", parse_mode=ParseMode.HTML, reply_markup=main_menu_kb())
+
 
 async def study_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get('awaiting') != 'study_photo': return
@@ -828,6 +981,51 @@ async def daily_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await q.edit_message_text(f"✅ Sahi! +15\n\n📖 {dq['explanation'] or ''}")
     else: await q.edit_message_text(f"❌ Galat. Sahi: <b>{dq['correct_option'].upper()}</b>\n\n📖 {dq['explanation'] or ''}", parse_mode=ParseMode.HTML)
 
+# ================== ONLINE SOURCE MONITOR ==================
+ONLINE_UPDATE_SOURCES = {
+    "INC": "https://www.indiannursingcouncil.org/updates",
+    "AIIMS": "https://www.aiimsexams.ac.in/",
+}
+def _online_title(url):
+    try:
+        req=Request(url,headers={"User-Agent":"BhushanScienceBot/3.2"})
+        with urlopen(req,timeout=8) as r: raw=r.read(120000).decode("utf-8","ignore")
+        m=re.search(r"<title[^>]*>(.*?)</title>",raw,re.I|re.S)
+        return re.sub(r"\s+"," ",m.group(1)).strip() if m else "OK"
+    except Exception as e: return f"ERROR: {type(e).__name__}"
+
+async def online_source_update_job(context):
+    changes=[]
+    for name,url in ONLINE_UPDATE_SOURCES.items():
+        title=await asyncio.to_thread(_online_title,url)
+        old=get_setting(f"online_{name.lower()}_title")
+        if old and old!=title and not title.startswith("ERROR:"): changes.append(f"🔔 {name} source changed")
+        set_setting(f"online_{name.lower()}_title",title)
+    set_setting("online_last_check",datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    if changes and OWNER_ID>0:
+        try: await context.bot.send_message(OWNER_ID,"🌐 Online source update detected:\n"+"\n".join(changes))
+        except Exception: pass
+
+async def idle_coach_job(context):
+    c=db()
+    rows=c.execute("""SELECT user_id FROM users WHERE is_banned=0 AND COALESCE(current_session,0)=0 AND (last_active IS NULL OR last_active <= datetime('now','-2 minutes')) ORDER BY user_id""").fetchall()
+    c.close()
+    if not rows: return
+    c=db()
+    quote=c.execute("SELECT text,author FROM quotes ORDER BY RANDOM() LIMIT 1").fetchone()
+    meme=c.execute("SELECT caption FROM memes ORDER BY RANDOM() LIMIT 1").fetchone()
+    c.close()
+    qtxt=f"💭 {quote['text']}" if quote else "💭 Aaj ka rule: consistency > motivation."
+    mtxt=f"😂 Meme: {meme['caption']}" if meme and meme['caption'] else "😂 Meme: Notes kholne ka notification aa gaya… ab ignore mat karna."
+    msg=("⏰ <b>2-minute Study Check</b>\n\n📚 Abhi active study session nahi hai.\n"
+         "👉 2 minute bhi revise kar lo — phir session start karo.\n\n"+qtxt+"\n"+mtxt+
+         "\n\n🇮🇳 NORCET/INC content official-source curriculum ke according maintained hai.")
+    for r in rows:
+        try:
+            await context.bot.send_message(r["user_id"],msg,parse_mode=ParseMode.HTML)
+            touch_user(r["user_id"]); await asyncio.sleep(0.05)
+        except Exception: pass
+
 # ================== AUTO JOBS ==================
 async def daily_quote_job(context):
     c = db(); q = c.execute("SELECT text,author FROM quotes ORDER BY RANDOM() LIMIT 1").fetchone()
@@ -869,7 +1067,7 @@ def reschedule_jobs(app):
         log.error("❌ JobQueue unavailable. Install python-telegram-bot[job-queue].")
         return
 
-    for name in ["daily_quote", "daily_meme", "daily_quiz", "exam_countdown"]:
+    for name in ["daily_quote", "daily_meme", "daily_quiz", "exam_countdown", "idle_coach", "online_source_update"]:
         for j in job_queue.get_jobs_by_name(name):
             j.schedule_removal()
 
@@ -885,6 +1083,8 @@ def reschedule_jobs(app):
         time=dtime(8, 0, tzinfo=IST),
         name="exam_countdown",
     )
+    job_queue.run_repeating(idle_coach_job, interval=120, first=120, name="idle_coach")
+    job_queue.run_repeating(online_source_update_job, interval=120, first=10, name="online_source_update")
 
 # ================== CHANNEL POST ==================
 async def channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -896,11 +1096,10 @@ async def channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ================== ROUTER ==================
 async def msg_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message: return
-    uid = update.effective_user.id; u = get_user(uid)
+    uid = update.effective_user.id; touch_user(uid); u = get_user(uid)
     if u and u.get('is_banned'): await update.message.reply_text("🚫 Banned."); return
     txt = (update.message.text or "").strip(); aw = context.user_data.get('awaiting')
     if aw == 'custom_minutes': await custom_minutes_msg(update, context); return
-    if aw == 'study_photo': await study_photo(update, context); return
     if aw == 'doubt_photo': await doubt_photo(update, context); return
     if aw == 'broadcast': await broadcast_msg(update, context); return
     if aw == 'exam_name': await exam_name_msg(update, context); return
@@ -938,7 +1137,7 @@ def main():
         app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
         for cmd, fn in [("start", start), ("help", help_cmd), ("admin", admin_cmd), ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel), ("addq", addq), ("set", set_cmd), ("settime", settime_cmd), ("addadmin", addadmin), ("removeadmin", removeadmin), ("userinfo", userinfo), ("ban", ban), ("unban", unban), ("gift", gift), ("reply", reply_doubt), ("addquote", addquote), ("delquote", delquote), ("listquotes", listquotes), ("addmeme", addmeme), ("delmeme", delmeme), ("listmemes", listmemes)]:
             app.add_handler(CommandHandler(cmd, fn))
-        for pat, fn in [("^verify_join$", verify_join_cb), ("^cls_", class_cb), ("^ntrack_", norcet_track_cb), ("^subn_", norcet_subject_cb), ("^tech_", technique_cb), ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb), ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb), ("^a_fj", fj_toggle), ("^a_", admin_cb)]:
+        for pat, fn in [("^verify_join$", verify_join_cb), ("^cls_", class_cb), ("^ntrack_", norcet_track_cb), ("^subn_", norcet_subject_cb), ("^nstart_", norcet_start_cb), ("^nback_", norcet_track_cb), ("^tech_", technique_cb), ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb), ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb), ("^a_fj", fj_toggle), ("^a_", admin_cb)]:
             app.add_handler(CallbackQueryHandler(fn, pattern=pat))
         app.add_handler(MessageHandler(filters.ChatType.CHANNEL, channel_post))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_router))
