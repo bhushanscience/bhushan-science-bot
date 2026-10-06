@@ -248,7 +248,8 @@ def norcet_subject_kb(track):
     subjects = NORCET_BSC_SUBJECTS if track == "B" else NORCET_GNM_SUBJECTS
     rows, row = [], []
     for i, subject in enumerate(subjects):
-        row.append(InlineKeyboardButton(subject[:45], callback_data=f"subn_{prefix}{i}"))
+        label = f"📚 {i+1}. {subject[:34]}"
+        row.append(InlineKeyboardButton(label[:55], callback_data=f"subn_{prefix}{i}"))
         if len(row) == 2:
             rows.append(row); row = []
     if row: rows.append(row)
@@ -428,11 +429,22 @@ async def norcet_subject_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     subject = NORCET_SUBJECT_MAP.get(code, "General Nursing")
     context.user_data['subject'] = subject
     context.user_data['norcet_subject_code'] = code
+
+    # Show a short confirmation first, then send the complete subject index.
+    # Keeping the long index in separate messages prevents Telegram's 4096-char
+    # limit / HTML parsing from hiding the topics.
     await q.edit_message_text(
-        f"🇮🇳 <b>{escape(subject)}</b>\n\n{norcet_subject_info(subject)}",
+        f"🇮🇳 <b>{escape(subject)}</b>\n\n📚 <b>Complete Subject Index</b> neeche diya hai.",
         parse_mode=ParseMode.HTML,
         reply_markup=norcet_subject_info_kb(code)
     )
+    info = norcet_subject_info(subject)
+    for i in range(0, len(info), 3500):
+        await context.bot.send_message(
+            q.from_user.id,
+            info[i:i+3500],
+            parse_mode=ParseMode.HTML
+        )
 
 async def norcet_back_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
