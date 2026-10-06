@@ -2,7 +2,7 @@
 # BHUSHAN SCIENCE BOT - v3.2 (Render Perfect + Logged)
 # ============================================================
 
-import os, sqlite3, logging, asyncio, random, threading, traceback
+import os, sqlite3, logging, asyncio, random, threading, traceback, time
 from datetime import datetime, timedelta, date, time as dtime
 from telegram import (
     Update, InlineKeyboardButton, InlineKeyboardMarkup,
@@ -13,6 +13,7 @@ from telegram.ext import (
     ContextTypes, filters
 )
 from telegram.constants import ParseMode
+from telegram.error import Conflict
 from flask import Flask
 import pytz
 
@@ -822,7 +823,24 @@ def main():
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_router))
         app.add_handler(MessageHandler(filters.PHOTO, msg_router))
         log.info("🤖 Bhushan Science Bot v3.2 starting...")
-        app.run_polling(allowed_updates=Update.ALL_TYPES, drop_pending_updates=True)
+        # Telegram allows only ONE getUpdates poller per bot token.
+        # During Render auto-deploy/restart, the old instance can briefly overlap
+        # with the new one and Telegram returns HTTP 409 Conflict. Do not crash;
+        # keep this process alive and retry until the other instance disappears.
+        first_poll = True
+        while True:
+            try:
+                log.info("📡 Starting Telegram polling...")
+                app.run_polling(
+                    allowed_updates=Update.ALL_TYPES,
+                    drop_pending_updates=first_poll,
+                    close_loop=False,
+                )
+                break
+            except Conflict as e:
+                first_poll = False
+                log.warning("⚠️ Telegram polling conflict (another instance is active). Retrying in 10s: %s", e)
+                time.sleep(10)
     except Exception as e:
         log.error(f"❌ BOT CRASHED: {e}")
         traceback.print_exc()
