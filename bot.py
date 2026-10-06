@@ -335,7 +335,7 @@ async def technique_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         track = context.user_data.get('norcet_track')
         if track:
             await q.edit_message_text(
-                f"{t['name']}\\n\\n{t['desc']}\\n\\n⏱ {t['work']}min × {t['cycles']} = <b>{total} min</b>\\n\\n🇮🇳 NORCET subject chuno:",
+                f"{t['name']}\n\n{t['desc']}\n\n⏱ {t['work']}min × {t['cycles']} = <b>{total} min</b>\n\n🇮🇳 NORCET subject chuno:",
                 parse_mode=ParseMode.HTML,
                 reply_markup=norcet_subject_kb(track)
             )
