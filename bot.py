@@ -3,6 +3,7 @@
 # ============================================================
 
 import os, sqlite3, logging, asyncio, random, threading, traceback, time, re
+from html import escape
 from urllib.request import Request, urlopen
 from datetime import datetime, timedelta, date, time as dtime
 from telegram import (
@@ -197,7 +198,7 @@ def norcet_subject_info(subject):
         "😂 Notes kholne ka notification aa gaya… ab ignore mat karna.",
         "😄 Coffee optional, revision compulsory.",
     ])
-    return f"<b>📚 INDEX</b>\n{index_text}\n\n<b>⭐ IMPORTANT</b>\n" + "\n".join(important) + f"\n\n<b>💬 QUOTE / MEME</b>\n{quote}\n\n📌 INC curriculum + NORCET nursing-course level."
+    return f"<b>📚 INDEX</b>\n{escape(index_text)}\n\n<b>⭐ IMPORTANT</b>\n" + "\n".join(important) + f"\n\n<b>💬 QUOTE / MEME</b>\n{quote}\n\n📌 INC curriculum + NORCET nursing-course level."
 
 def norcet_subject_info_kb(code):
     return InlineKeyboardMarkup([
@@ -401,9 +402,18 @@ async def norcet_subject_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['subject'] = subject
     context.user_data['norcet_subject_code'] = code
     await q.edit_message_text(
-        f"🇮🇳 <b>{subject}</b>\n\n{norcet_subject_info(subject)}",
+        f"🇮🇳 <b>{escape(subject)}</b>\n\n{norcet_subject_info(subject)}",
         parse_mode=ParseMode.HTML,
         reply_markup=norcet_subject_info_kb(code)
+    )
+
+async def norcet_back_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
+    track = q.data.replace("nback_", "")
+    await q.edit_message_text(
+        "📚 <b>Subject List</b>\n\nSubject select karo:",
+        parse_mode=ParseMode.HTML,
+        reply_markup=norcet_subject_kb(track)
     )
 
 async def norcet_start_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -414,7 +424,7 @@ async def norcet_start_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     default = TECHNIQUES[context.user_data.get('technique', 'pomodoro')]['work'] * TECHNIQUES[context.user_data.get('technique', 'pomodoro')]['cycles']
     context.user_data['duration'] = default
     await q.edit_message_text(
-        f"🇮🇳 <b>{subject}</b>\n\n⏱ Default: <b>{default} min</b>\n\nDuration choose karo:",
+        f"🇮🇳 <b>{escape(subject)}</b>\n\n⏱ Default: <b>{default} min</b>\n\nDuration choose karo:",
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton(f"Default ({default}m)", callback_data=f"dur_{default}"), InlineKeyboardButton("30 min", callback_data="dur_30")],
@@ -513,7 +523,7 @@ async def start_study_session(context: ContextTypes.DEFAULT_TYPE, uid):
             context.job_queue.run_once(break_msg_job, delay_min * 60, chat_id=uid, data={'sid': sid, 'cycle': cyc + 1, 'mode': mode})
     context.job_queue.run_once(session_reminder, dur * 60, chat_id=uid, data={'sid': sid})
     context.job_queue.run_once(nag_check, (dur + 5) * 60, chat_id=uid, data={'sid': sid})
-    await context.bot.send_message(uid, f"✅ <b>Session #{sid}</b>\n\n{t['name']} | {sub} | {dur} min\n\n{MODES[mode]['start']}\n\n📌 Index + important points dekhne ke baad focused study karo.", parse_mode=ParseMode.HTML, reply_markup=main_menu_kb())
+    await context.bot.send_message(uid, f"✅ <b>Session #{sid}</b>\n\n{t['name']} | {escape(sub)} | {dur} min\n\n{MODES[mode]['start']}\n\n📌 Index + important points dekhne ke baad focused study karo.", parse_mode=ParseMode.HTML, reply_markup=main_menu_kb())
 
 
 async def study_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1137,7 +1147,7 @@ def main():
         app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
         for cmd, fn in [("start", start), ("help", help_cmd), ("admin", admin_cmd), ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel), ("addq", addq), ("set", set_cmd), ("settime", settime_cmd), ("addadmin", addadmin), ("removeadmin", removeadmin), ("userinfo", userinfo), ("ban", ban), ("unban", unban), ("gift", gift), ("reply", reply_doubt), ("addquote", addquote), ("delquote", delquote), ("listquotes", listquotes), ("addmeme", addmeme), ("delmeme", delmeme), ("listmemes", listmemes)]:
             app.add_handler(CommandHandler(cmd, fn))
-        for pat, fn in [("^verify_join$", verify_join_cb), ("^cls_", class_cb), ("^ntrack_", norcet_track_cb), ("^subn_", norcet_subject_cb), ("^nstart_", norcet_start_cb), ("^nback_", norcet_track_cb), ("^tech_", technique_cb), ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb), ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb), ("^a_fj", fj_toggle), ("^a_", admin_cb)]:
+        for pat, fn in [("^verify_join$", verify_join_cb), ("^cls_", class_cb), ("^ntrack_", norcet_track_cb), ("^subn_", norcet_subject_cb), ("^nstart_", norcet_start_cb), ("^nback_", norcet_back_cb), ("^tech_", technique_cb), ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb), ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb), ("^a_fj", fj_toggle), ("^a_", admin_cb)]:
             app.add_handler(CallbackQueryHandler(fn, pattern=pat))
         app.add_handler(MessageHandler(filters.ChatType.CHANNEL, channel_post))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_router))
