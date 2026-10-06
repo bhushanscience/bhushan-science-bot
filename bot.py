@@ -384,17 +384,8 @@ def get_user_mode(uid): u = get_user(uid); return (u.get('mode') if u else None)
 
 # ================== FORCE JOIN ==================
 async def check_joined(context, user_id):
-    # Safety: legacy DBs may contain force_join_enabled=1 from an older setup.
-    # Only an explicit admin ON action may activate force-join.
-    if get_setting('force_join_configured', '0') != '1': return True
-    if get_setting('force_join_enabled', '0') != '1': return True
-    chs = all_channels()
-    if not chs: return True
-    for ch in chs:
-        try:
-            m = await context.bot.get_chat_member(chat_id=ch['channel_id'], user_id=user_id)
-            if m.status in ['left', 'kicked']: return False
-        except Exception as e: log.warning(f"Join check fail: {e}")
+    # Force-join is intentionally disabled. Legacy channel rows/settings must
+    # never block or redirect normal users.
     return True
 
 async def force_join_message(update, context):
