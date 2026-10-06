@@ -1540,8 +1540,7 @@ def main():
         app.add_handler(MessageHandler(filters.ChatType.CHANNEL, channel_post))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_router))
         app.add_handler(MessageHandler(filters.PHOTO, msg_router))
-        me = asyncio.run(app.bot.get_me())
-        log.info("🤖 Bhushan Science Bot v3.2 starting as @%s (id=%s)", me.username, me.id)
+        log.info("🤖 Bhushan Science Bot v3.2 starting...")
         log.info("📡 Telegram update handlers registered; waiting for incoming updates...")
         # Render-safe Telegram WEBHOOK mode.
         # Webhooks and getUpdates are mutually exclusive, so this removes the
