@@ -185,11 +185,30 @@ def norcet_subject_index(subject):
 def norcet_subject_info(subject):
     topics = norcet_subject_index(subject)
     index_text = "\n".join(f"{i+1}. {x}" for i, x in enumerate(topics))
+    # Every clinical topic follows one consistent nursing/NORCET study framework.
+    framework = [
+        "1️⃣ Definition / Introduction",
+        "2️⃣ Causes / Etiology / Risk factors",
+        "3️⃣ Pathophysiology / Pathogenesis",
+        "4️⃣ Signs & Symptoms / Clinical features",
+        "5️⃣ Diagnosis / Diagnostic techniques & investigations",
+        "6️⃣ Medical management",
+        "7️⃣ Surgical management",
+        "8️⃣ Pharmacological management",
+        "9️⃣ Nursing management",
+        "🔟 Lifestyle modification / Diet / Prevention",
+        "1️⃣1️⃣ Nursing Care Plan: Assessment → Nursing Diagnosis → Goals → Interventions → Rationale → Evaluation",
+        "1️⃣2️⃣ Nurse Responsibility: monitoring, medication safety, infection control, patient education, documentation, escalation & emergency response",
+        "1️⃣3️⃣ Complications / Red flags / When to escalate",
+        "1️⃣4️⃣ NORCET high-yield points + case-scenario priorities",
+    ]
     important = [
-        "⭐ Definitions + classifications yaad rakho.",
-        "⭐ Assessment → priorities → intervention → evaluation.",
-        "⭐ Safety, infection control, medication safety aur emergency priorities par focus.",
-        "⭐ Case-based questions me ABC, vitals, red flags aur first action identify karo.",
+        "⭐ Har disease me definition, etiology, pathophysiology aur clinical features ko connect karke padho.",
+        "⭐ Diagnosis me first-line/common tests, important findings aur nursing preparation/after-care yaad rakho.",
+        "⭐ Management ko medical + surgical + pharmacological + nursing + lifestyle buckets me revise karo.",
+        "⭐ Nursing care plan me NANDA-style nursing diagnosis, measurable goals, interventions, rationale aur evaluation cover karo.",
+        "⭐ Nurse responsibility me assessment, vitals, I/O, medication safety, infection prevention, education, documentation aur timely referral/escalation include karo.",
+        "⭐ Case-based NORCET question me ABC, priority, safety, red flags aur first nursing action identify karo.",
     ]
     quote = random.choice([
         "🔥 Aaj ka 30 minute kal ki tension kam karta hai.",
@@ -198,7 +217,15 @@ def norcet_subject_info(subject):
         "😂 Notes kholne ka notification aa gaya… ab ignore mat karna.",
         "😄 Coffee optional, revision compulsory.",
     ])
-    return f"<b>📚 INDEX</b>\n{escape(index_text)}\n\n<b>⭐ IMPORTANT</b>\n" + "\n".join(important) + f"\n\n<b>💬 QUOTE / MEME</b>\n{quote}\n\n📌 INC curriculum + NORCET nursing-course level."
+    return (
+        f"<b>📚 SUBJECT INDEX</b>\n<b>{escape(subject)}</b>\n\n"
+        f"{escape(index_text)}\n\n"
+        "<b>🩺 COMPLETE TOPIC FRAMEWORK</b>\n" +
+        "\n".join(framework) +
+        "\n\n<b>⭐ IMPORTANT</b>\n" + "\n".join(important) +
+        f"\n\n<b>💬 QUOTE / MEME</b>\n{quote}" +
+        "\n\n📌 INC curriculum + NORCET nursing-course level."
+    )
 
 def norcet_subject_info_kb(code):
     return InlineKeyboardMarkup([
