@@ -644,7 +644,7 @@ async def set_mode_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['onboarding'] = True
     context.user_data['onboarding_step'] = 'class'
     await q.edit_message_text(
-        f"✅ Mode: <b>{MODES[mode]['name']}</b>\\n\\n"
+        f"✅ Mode: <b>{MODES[mode]['name']}</b>\n\n"
         "🏫 <b>Step 2/4 — Class / Exam chuno:</b>",
         parse_mode=ParseMode.HTML,
         reply_markup=class_selection_kb()
