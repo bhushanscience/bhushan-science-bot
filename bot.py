@@ -333,7 +333,7 @@ def init_db():
     cur.execute('''CREATE TABLE IF NOT EXISTS daily_quiz(id INTEGER PRIMARY KEY AUTOINCREMENT, quiz_date DATE UNIQUE, question TEXT, option_a TEXT, option_b TEXT, option_c TEXT, option_d TEXT, correct_option TEXT, explanation TEXT)''')
     cur.execute('''CREATE TABLE IF NOT EXISTS quiz_answers(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, quiz_date DATE, chosen TEXT, correct INTEGER, UNIQUE(user_id, quiz_date))''')
     cur.execute('''CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT)''')
-    defaults = {'force_join_enabled': '0', 'force_join_configured': '0', 'reward_points': '10', 'punishment_points': '20', 'nag_message_count': '5', 'daily_points_target': '50', 'bot_name': 'Bhushan Science', 'welcome_msg': 'Padhai karo!', 'quote_time': '07:00', 'meme_time': '21:00', 'quiz_time': '20:00', 'break_reminder': '1'}
+    defaults = {'force_join_enabled': '0', 'force_join_configured': '0', 'join_fun_name': '', 'join_fun_link': '', 'reward_points': '10', 'punishment_points': '20', 'nag_message_count': '5', 'daily_points_target': '50', 'bot_name': 'Bhushan Science', 'welcome_msg': 'Padhai karo!', 'quote_time': '07:00', 'meme_time': '21:00', 'quiz_time': '20:00', 'break_reminder': '1'}
     for k, v in defaults.items(): cur.execute("INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)", (k, v))
     try:
         cur.execute("ALTER TABLE users ADD COLUMN last_active TIMESTAMP")
@@ -405,19 +405,56 @@ async def force_join_message(update, context):
     await update.message.reply_text("🔒 <b>Pehle channel join karo:</b>", reply_markup=InlineKeyboardMarkup(btns), parse_mode=ParseMode.HTML)
 
 # ================== KEYBOARDS ==================
+def class_selection_kb():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Class 9", callback_data="cls_9"), InlineKeyboardButton("Class 10", callback_data="cls_10")],
+        [InlineKeyboardButton("Class 11", callback_data="cls_11"), InlineKeyboardButton("Class 12", callback_data="cls_12")],
+        [InlineKeyboardButton("NEET", callback_data="cls_NEET"), InlineKeyboardButton("NORCET", callback_data="cls_NORCET")],
+        [InlineKeyboardButton("Other", callback_data="cls_Other")]
+    ])
+
+def subject_selection_kb():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("Physics", callback_data="sub_Physics"), InlineKeyboardButton("Chemistry", callback_data="sub_Chemistry")],
+        [InlineKeyboardButton("Biology", callback_data="sub_Biology"), InlineKeyboardButton("Maths", callback_data="sub_Maths")],
+        [InlineKeyboardButton("English", callback_data="sub_English"), InlineKeyboardButton("GK", callback_data="sub_GK")],
+        [InlineKeyboardButton("Other", callback_data="sub_Other")]
+    ])
+
+def technique_selection_kb():
+    keys = list(TECHNIQUES.keys()); btns = []; row = []
+    for k in keys:
+        row.append(InlineKeyboardButton(TECHNIQUES[k]['name'], callback_data=f"tech_{k}"))
+        if len(row) == 2: btns.append(row); row = []
+    if row: btns.append(row)
+    return InlineKeyboardMarkup(btns)
+
 def main_menu_kb():
     return ReplyKeyboardMarkup([
         [KeyboardButton("📚 Padhai Shuru"), KeyboardButton("📸 Doubt Clear")],
-        [KeyboardButton("🎯 Exam Countdown"), KeyboardButton("📅 Aaj ka Target")],
+        [KeyboardButton("🎉 Join Fun"), KeyboardButton("🎯 Exam Countdown"), KeyboardButton("📅 Aaj ka Target")],
         [KeyboardButton("🏆 Points"), KeyboardButton("🏅 Leaderboard"), KeyboardButton("🎖️ Badges")],
         [KeyboardButton("🎭 Mode Badlo"), KeyboardButton("📊 Report")],
         [KeyboardButton("💭 Thought"), KeyboardButton("😂 Meme"), KeyboardButton("❓ Help")]
     ], resize_keyboard=True)
 
+async def join_fun_view(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    name = get_setting('join_fun_name', '').strip()
+    link = get_setting('join_fun_link', '').strip()
+    if not link:
+        await update.message.reply_text("🎉 <b>Join Fun</b>\n\nAbhi channel admin ne set nahi kiya hai.", parse_mode=ParseMode.HTML)
+        return
+    await update.message.reply_text(
+        f"🎉 <b>Join Fun</b>\n\n📢 <b>{escape(name or 'Our Channel')}</b>\n\nCommunity se connected raho 👇",
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(f"🚀 Join {name or 'Channel'}", url=link)]])
+    )
+
 def admin_menu_kb():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("👥 Users", callback_data="a_users"), InlineKeyboardButton("📢 Channels", callback_data="a_channels")],
-        [InlineKeyboardButton("❓ Questions", callback_data="a_questions"), InlineKeyboardButton("⚙️ Settings", callback_data="a_settings")],
+        [InlineKeyboardButton("🎉 Join Fun", callback_data="a_joinfun"), InlineKeyboardButton("⚙️ Settings", callback_data="a_settings")],
+        [InlineKeyboardButton("❓ Questions", callback_data="a_questions")],
         [InlineKeyboardButton("💭 Quotes", callback_data="a_quotes"), InlineKeyboardButton("😂 Memes", callback_data="a_memes")],
         [InlineKeyboardButton("📣 Broadcast", callback_data="a_broadcast"), InlineKeyboardButton("💬 Doubts", callback_data="a_doubts")],
         [InlineKeyboardButton("🎯 Daily Quiz", callback_data="a_dq"), InlineKeyboardButton("⏰ Times", callback_data="a_times")],
@@ -432,11 +469,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     create_user(uid, name)
     user = get_user(uid)
     if not user.get('verified'): update_user(uid, verified=1)
-    if not user.get('user_class'):
-        await update.message.reply_text(f"👋 Namaste <b>{name}</b>!\n\nMain <b>{get_setting('bot_name')}</b> hoon.\n\nApni class batao:", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Class 9", callback_data="cls_9"), InlineKeyboardButton("Class 10", callback_data="cls_10")], [InlineKeyboardButton("Class 11", callback_data="cls_11"), InlineKeyboardButton("Class 12", callback_data="cls_12")], [InlineKeyboardButton("NEET", callback_data="cls_NEET"), InlineKeyboardButton("NORCET", callback_data="cls_NORCET")], [InlineKeyboardButton("Other", callback_data="cls_Other")]]))
-        return
-    mode_n = MODES.get(user.get('mode', 'serious'), MODES['serious'])['name']
-    await update.message.reply_text(f"✅ Welcome <b>{name}</b>!\n\n💎 Points: <b>{user['points']}</b>\n🔥 Streak: <b>{user['streak']} din</b>\n⏱ Total: <b>{user['total_minutes']} min</b>\n🎭 Mode: <b>{mode_n}</b>\n\n📌 {get_setting('welcome_msg')}", parse_mode=ParseMode.HTML, reply_markup=main_menu_kb())
+    context.user_data['onboarding'] = True
+    context.user_data['onboarding_step'] = 'mode'
+    await update.message.reply_text(
+        f"👋 Namaste <b>{name}</b>!\n\n🚀 <b>{get_setting('bot_name')}</b> setup karte hain.\n\n"
+        "1️⃣ Mode → 2️⃣ Class → 3️⃣ Subject → 4️⃣ Technique\n\n"
+        "🎭 <b>Step 1/4 — Mode chuno:</b>",
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton(f"{'✅ ' if user.get('mode','serious') == 'serious' else ''}{MODES['serious']['name']}", callback_data="setm_serious")],
+            [InlineKeyboardButton(f"{'✅ ' if user.get('mode','serious') == 'focus' else ''}{MODES['focus']['name']}", callback_data="setm_focus")],
+            [InlineKeyboardButton(f"{'✅ ' if user.get('mode','serious') == 'fun' else ''}{MODES['fun']['name']}", callback_data="setm_fun")]
+        ])
+    )
 
 async def verify_join_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query; await q.answer()
@@ -456,8 +501,12 @@ async def class_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=norcet_track_kb()
         )
         return
-    await q.edit_message_text(f"✅ Class: <b>{cls}</b>", parse_mode=ParseMode.HTML)
-    await context.bot.send_message(q.from_user.id, "Ab padhai shuru karo 👇", reply_markup=main_menu_kb())
+    context.user_data['onboarding_step'] = 'subject'
+    await q.edit_message_text(
+        f"📚 <b>Class {escape(cls)}</b>\n\n📖 <b>Step 3/4 — Subject chuno:</b>",
+        parse_mode=ParseMode.HTML,
+        reply_markup=subject_selection_kb()
+    )
 
 async def norcet_track_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
@@ -465,10 +514,10 @@ async def norcet_track_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['norcet_track'] = track
     name = "INC B.Sc Nursing 2020" if track == "B" else "INC GNM 3-Year"
     subjects = NORCET_BSC_SUBJECTS if track == "B" else NORCET_GNM_SUBJECTS
+    context.user_data['onboarding_step'] = 'subject'
     await q.edit_message_text(
-        f"📚 <b>{name}</b>\n\n"
-        f"Total subjects/modules: <b>{len(subjects)}</b>\n"
-        "Subject select karo:",
+        f"📚 <b>{name}</b>\n\nTotal subjects/modules: <b>{len(subjects)}</b>\n"
+        "📖 <b>Step 3/4 — Subject select karo:</b>",
         parse_mode=ParseMode.HTML,
         reply_markup=norcet_subject_kb(track)
     )
@@ -479,11 +528,45 @@ async def norcet_subject_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     subject = NORCET_SUBJECT_MAP.get(code, "General Nursing")
     context.user_data['subject'] = subject
     context.user_data['norcet_subject_code'] = code
-
+    if context.user_data.get('onboarding'):
+        await q.edit_message_text(
+            f"📚 <b>{escape(subject)}</b>\n\n"
+            "🎭 <b>Step 4/4 — Technique choose karo:</b>",
+            parse_mode=ParseMode.HTML,
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🎭 Choose Technique", callback_data=f"ntech_{code}")],
+                [InlineKeyboardButton("📖 Important Topics", callback_data=f"ninfo_{code}")]
+            ])
+        )
+        return
     await q.edit_message_text(
         norcet_subject_info(subject),
         parse_mode=ParseMode.HTML,
         reply_markup=norcet_subject_info_kb(code)
+    )
+
+async def norcet_info_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
+    code = q.data.replace("ninfo_", "")
+    subject = NORCET_SUBJECT_MAP.get(code, "General Nursing")
+    context.user_data['subject'] = subject
+    context.user_data['norcet_subject_code'] = code
+    await q.edit_message_text(
+        norcet_subject_info(subject),
+        parse_mode=ParseMode.HTML,
+        reply_markup=norcet_subject_info_kb(code)
+    )
+
+async def norcet_technique_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
+    code = q.data.replace("ntech_", "")
+    subject = NORCET_SUBJECT_MAP.get(code, context.user_data.get('subject', 'General Nursing'))
+    context.user_data['subject'] = subject
+    context.user_data['norcet_subject_code'] = code
+    await q.edit_message_text(
+        f"📚 <b>{escape(subject)}</b>\n\n🎭 <b>Step 4/4 — Technique choose karo:</b>",
+        parse_mode=ParseMode.HTML,
+        reply_markup=technique_selection_kb()
     )
 
 async def norcet_topic_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -560,33 +643,60 @@ async def set_mode_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ================== PADHAI ==================
 async def padhai_shuru(update: Update, context: ContextTypes.DEFAULT_TYPE):
     touch_user(update.effective_user.id)
-    keys = list(TECHNIQUES.keys()); btns = []; row = []
-    for k in keys:
-        row.append(InlineKeyboardButton(TECHNIQUES[k]['name'], callback_data=f"tech_{k}"))
-        if len(row) == 2: btns.append(row); row = []
-    if row: btns.append(row)
-    await update.message.reply_text("🎓 <b>Technique Chuno</b>", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(btns))
+    user = get_user(update.effective_user.id) or {}
+    context.user_data.pop('subject', None)
+    if user.get('user_class') == "NORCET":
+        track = context.user_data.get('norcet_track')
+        if track:
+            await update.message.reply_text("🇮🇳 <b>NORCET</b> — Subject chuno:", parse_mode=ParseMode.HTML, reply_markup=norcet_subject_kb(track))
+            return
+    await update.message.reply_text("📚 <b>Subject chuno</b>", parse_mode=ParseMode.HTML, reply_markup=subject_selection_kb())
 
 async def technique_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query; await q.answer(); touch_user(q.from_user.id); tech = q.data.replace("tech_", "")
     context.user_data['technique'] = tech; t = TECHNIQUES[tech]; total = t['work'] * t['cycles']
-    user = get_user(q.from_user.id) or {}
-    if user.get('user_class') == "NORCET":
-        track = context.user_data.get('norcet_track')
-        if track:
-            await q.edit_message_text(
-                f"{t['name']}\n\n{t['desc']}\n\n⏱ {t['work']}min × {t['cycles']} = <b>{total} min</b>\n\n🇮🇳 NORCET subject chuno:",
-                parse_mode=ParseMode.HTML,
-                reply_markup=norcet_subject_kb(track)
-            )
-            return
-    await q.edit_message_text(f"{t['name']}\\n\\n{t['desc']}\\n\\n⏱ {t['work']}min × {t['cycles']} = <b>{total} min</b>\\n\\nAb subject chuno:", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Physics", callback_data="sub_Physics"), InlineKeyboardButton("Chemistry", callback_data="sub_Chemistry")], [InlineKeyboardButton("Biology", callback_data="sub_Biology"), InlineKeyboardButton("Maths", callback_data="sub_Maths")], [InlineKeyboardButton("English", callback_data="sub_English"), InlineKeyboardButton("GK", callback_data="sub_GK")], [InlineKeyboardButton("Other", callback_data="sub_Other")]]))
+    context.user_data['onboarding'] = False
+    context.user_data['onboarding_step'] = None
+    subject = context.user_data.get('subject')
+    if subject:
+        await q.edit_message_text(
+            f"🎭 <b>{t['name']}</b>\n\n{t['desc']}\n\n"
+            f"⏱ {t['work']}min × {t['cycles']} = <b>{total} min</b>\n\n"
+            f"📚 Subject: <b>{escape(subject)}</b>\n\n⏱ Duration choose karo:",
+            parse_mode=ParseMode.HTML,
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton(f"Default ({total}m)", callback_data=f"dur_{total}"), InlineKeyboardButton("30 min", callback_data="dur_30")],
+                [InlineKeyboardButton("1 ghanta", callback_data="dur_60"), InlineKeyboardButton("2 ghante", callback_data="dur_120")],
+                [InlineKeyboardButton("3 ghante", callback_data="dur_180"), InlineKeyboardButton("Custom", callback_data="dur_custom")]
+            ])
+        )
+        return
+    await q.edit_message_text(
+        f"{t['name']}\n\n{t['desc']}\n\n⏱ {total} min\n\nAb subject chuno:",
+        parse_mode=ParseMode.HTML,
+        reply_markup=subject_selection_kb()
+    )
 
 async def subject_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query; await q.answer(); sub = q.data.replace("sub_", "")
     context.user_data['subject'] = sub
+    if context.user_data.get('onboarding'):
+        await q.edit_message_text(
+            f"📚 <b>Subject: {escape(sub)}</b>\n\n🎭 <b>Step 4/4 — Technique choose karo:</b>",
+            parse_mode=ParseMode.HTML,
+            reply_markup=technique_selection_kb()
+        )
+        return
     default = TECHNIQUES[context.user_data.get('technique', 'pomodoro')]['work'] * TECHNIQUES[context.user_data.get('technique', 'pomodoro')]['cycles']
-    await q.edit_message_text(f"Subject: <b>{sub}</b>\n\nKitni der?", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton(f"Default ({default}m)", callback_data=f"dur_{default}"), InlineKeyboardButton("30 min", callback_data="dur_30")], [InlineKeyboardButton("1 ghanta", callback_data="dur_60"), InlineKeyboardButton("2 ghante", callback_data="dur_120")], [InlineKeyboardButton("3 ghante", callback_data="dur_180"), InlineKeyboardButton("Custom", callback_data="dur_custom")]]))
+    await q.edit_message_text(
+        f"Subject: <b>{escape(sub)}</b>\n\nKitni der?",
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton(f"Default ({default}m)", callback_data=f"dur_{default}"), InlineKeyboardButton("30 min", callback_data="dur_30")],
+            [InlineKeyboardButton("1 ghanta", callback_data="dur_60"), InlineKeyboardButton("2 ghante", callback_data="dur_120")],
+            [InlineKeyboardButton("3 ghante", callback_data="dur_180"), InlineKeyboardButton("Custom", callback_data="dur_custom")]
+        ])
+    )
 
 async def duration_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query; await q.answer(); touch_user(q.from_user.id); dur = q.data.replace("dur_", "")
@@ -893,6 +1003,28 @@ async def admin_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     d = q.data
     if d == "a_menu": await q.edit_message_text("🛠️ Admin Panel", reply_markup=admin_menu_kb()); return
     if d == "a_channels": await channels_panel(q, context); return
+    if d == "a_joinfun":
+        context.user_data['awaiting'] = 'join_fun'
+        name = get_setting('join_fun_name', '').strip()
+        link = get_setting('join_fun_link', '').strip()
+        await q.edit_message_text(
+            "🎉 <b>Join Fun Channel</b>\n\n"
+            f"Current: <b>{escape(name or 'Not set')}</b>\n"
+            f"Link: <code>{escape(link or 'Not set')}</code>\n\n"
+            "Send: <code>Channel Name | https://t.me/yourchannel</code>",
+            parse_mode=ParseMode.HTML,
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🗑️ Clear", callback_data="a_joinfun_clear")],
+                [InlineKeyboardButton("🔙 Back", callback_data="a_menu")]
+            ])
+        )
+        return
+    if d == "a_joinfun_clear":
+        set_setting('join_fun_name', '')
+        set_setting('join_fun_link', '')
+        context.user_data['awaiting'] = None
+        await q.edit_message_text("✅ Join Fun channel clear ho gaya.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="a_menu")]]))
+        return
     if d == "a_settings": await settings_panel(q, context); return
     if d == "a_times": await times_panel(q, context); return
     if d == "a_quotes":
@@ -1281,10 +1413,26 @@ async def msg_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if aw == 'exam_name': await exam_name_msg(update, context); return
     if aw == 'exam_date': await exam_date_msg(update, context); return
     if aw == 'daily_quiz': await daily_quiz_admin_msg(update, context); return
+    if aw == 'join_fun':
+        if not is_admin(uid):
+            context.user_data['awaiting'] = None
+            return
+        try:
+            name, link = [x.strip() for x in txt.split("|", 1)]
+            if not name or not link.startswith(("https://", "http://", "tg://")):
+                raise ValueError
+            set_setting('join_fun_name', name[:80])
+            set_setting('join_fun_link', link[:500])
+            context.user_data['awaiting'] = None
+            await update.message.reply_text(f"✅ Join Fun updated!\n\n🎉 {escape(name)}\n🔗 {escape(link)}", parse_mode=ParseMode.HTML, reply_markup=admin_menu_kb())
+        except Exception:
+            await update.message.reply_text("❌ Format: <code>Channel Name | https://t.me/yourchannel</code>", parse_mode=ParseMode.HTML)
+        return
 
     if txt == "📚 Padhai Shuru": await padhai_shuru(update, context); return
     if txt == "📸 Doubt Clear": await doubt_start(update, context); return
     if txt == "🎭 Mode Badlo": await mode_menu(update, context); return
+    if txt == "🎉 Join Fun": await join_fun_view(update, context); return
     if txt in ("📊 Report", "📊 Meri Report"): await report(update, context); return
     if txt == "🏆 Points": await points_cmd(update, context); return
     if txt == "📅 Aaj ka Target": await today_target(update, context); return
@@ -1328,7 +1476,7 @@ def main():
         app.add_error_handler(bot_error_handler)
         for cmd, fn in [("start", start), ("help", help_cmd), ("admin", admin_cmd), ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel), ("addq", addq), ("set", set_cmd), ("settime", settime_cmd), ("addadmin", addadmin), ("removeadmin", removeadmin), ("userinfo", userinfo), ("ban", ban), ("unban", unban), ("gift", gift), ("reply", reply_doubt), ("addquote", addquote), ("delquote", delquote), ("listquotes", listquotes), ("addmeme", addmeme), ("delmeme", delmeme), ("listmemes", listmemes)]:
             app.add_handler(CommandHandler(cmd, fn))
-        for pat, fn in [("^verify_join$", verify_join_cb), ("^cls_", class_cb), ("^ntrack_", norcet_track_cb), ("^subn_", norcet_subject_cb), ("^ntopic_", norcet_topic_cb), ("^nbacktopic_", norcet_backtopic_cb), ("^nstart_", norcet_start_cb), ("^nback_", norcet_back_cb), ("^tech_", technique_cb), ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb), ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb), ("^a_fj", fj_toggle), ("^a_", admin_cb)]:
+        for pat, fn in [("^verify_join$", verify_join_cb), ("^cls_", class_cb), ("^ntrack_", norcet_track_cb), ("^subn_", norcet_subject_cb), ("^ninfo_", norcet_info_cb), ("^ntech_", norcet_technique_cb), ("^ntopic_", norcet_topic_cb), ("^nbacktopic_", norcet_backtopic_cb), ("^nstart_", norcet_start_cb), ("^nback_", norcet_back_cb), ("^tech_", technique_cb), ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb), ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb), ("^a_fj", fj_toggle), ("^a_", admin_cb)]:
             app.add_handler(CallbackQueryHandler(fn, pattern=pat))
         app.add_handler(MessageHandler(filters.ChatType.CHANNEL, channel_post))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_router))
