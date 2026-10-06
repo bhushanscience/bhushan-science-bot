@@ -182,56 +182,81 @@ def norcet_subject_index(subject):
         if key.lower() in s or s in key.lower(): return topics
     return ["Core concepts","Definitions & terminology","Assessment","Pathophysiology / principles","Nursing management","Patient safety","Common complications","Emergency care","Prevention & health education","NORCET high-yield revision"]
 
+def norcet_topic_kb(code):
+    subject = NORCET_SUBJECT_MAP.get(code, "General Nursing")
+    topics = norcet_subject_index(subject)
+    rows, row = [], []
+    for i, topic in enumerate(topics):
+        label = f"📖 {i+1}. {topic}"
+        row.append(InlineKeyboardButton(label[:55], callback_data=f"ntopic_{code}_{i}"))
+        if len(row) == 1:
+            rows.append(row); row = []
+    if row: rows.append(row)
+    rows.append([InlineKeyboardButton("▶️ Start Study Session", callback_data=f"nstart_{code}")])
+    rows.append([InlineKeyboardButton("🔙 Subject List", callback_data=f"nback_{code[:1]}")])
+    return InlineKeyboardMarkup(rows)
+
+def norcet_topic_info(subject, topic):
+    # This is the common clinical/nursing framework requested by the user.
+    # Topic-specific facts are intentionally separated from the framework so
+    # vetted content can be expanded without changing the navigation.
+    clinical = any(x in subject.lower() for x in [
+        "nursing", "pathology", "pharmacology", "microbiology", "anatomy",
+        "physiology", "midwifery", "gynaec", "health", "first aid",
+        "nutrition", "mental", "child", "community", "biochemistry",
+        "forensic", "clinical", "geriatric"
+    ])
+    if clinical:
+        framework = [
+            ("1️⃣ Definition / Introduction", f"{topic}: definition, scope, classification and key terminology."),
+            ("2️⃣ Causes / Etiology / Risk factors", "Major causes, risk factors, predisposing conditions and preventable factors."),
+            ("3️⃣ Pathophysiology / Pathogenesis", "Cause → mechanism → organ/system changes → clinical manifestations."),
+            ("4️⃣ Signs & Symptoms / Clinical features", "Typical findings, important variations, red flags and priority assessment findings."),
+            ("5️⃣ Diagnosis / Diagnostic techniques", "History, physical assessment, relevant laboratory/imaging/bedside tests, interpretation and nursing preparation."),
+            ("6️⃣ Medical management", "Supportive care, monitoring, referral criteria and multidisciplinary management."),
+            ("7️⃣ Surgical management", "Indications, preparation, postoperative monitoring and major complications where applicable."),
+            ("8️⃣ Pharmacological management", "Drug classes, indications, major adverse effects, precautions and medication-safety points."),
+            ("9️⃣ Nursing management", "Assessment, priorities, monitoring, interventions, infection prevention and patient safety."),
+            ("🔟 Lifestyle / Diet / Prevention", "Diet, activity, adherence, risk-factor modification, prevention and health education."),
+            ("1️⃣1️⃣ Nursing Care Plan", "Assessment → Nursing Diagnosis → Goals → Interventions → Rationale → Evaluation."),
+            ("1️⃣2️⃣ Nurse Responsibility", "Monitoring, medication safety, documentation, communication, education, escalation and emergency response."),
+            ("1️⃣3️⃣ Complications / Red flags", "Important complications, danger signs and when immediate escalation is required."),
+            ("1️⃣4️⃣ NORCET High-Yield / Case Scenario", "Priority action, ABC/safety, first nursing intervention, common traps and case-based revision points."),
+        ]
+    else:
+        framework = [
+            ("1️⃣ Definition / Introduction", f"{topic}: concept, scope and key terminology."),
+            ("2️⃣ Core principles / Classification", "Important classifications, principles, components and relationships."),
+            ("3️⃣ Process / Mechanism", "Step-by-step process, mechanism or workflow."),
+            ("4️⃣ Important features", "Key characteristics, signs/features, examples and distinguishing points."),
+            ("5️⃣ Assessment / Evaluation", "Methods, tools, measurements, interpretation and common findings."),
+            ("6️⃣ Application / Management", "Practical application, planning, implementation and problem-solving."),
+            ("7️⃣ Safety / Legal / Ethical points", "Patient safety, professional responsibility, ethics and legal considerations where relevant."),
+            ("8️⃣ Nursing application", "How the nurse applies the concept in clinical/educational/community practice."),
+            ("9️⃣ Patient / Community Education", "Communication, counselling, prevention and health-promotion points."),
+            ("🔟 Nursing Care Plan", "Assessment → Nursing Diagnosis → Goals → Interventions → Rationale → Evaluation where applicable."),
+            ("1️⃣1️⃣ Nurse Responsibility", "Monitoring, documentation, coordination, education and escalation."),
+            ("1️⃣2️⃣ NORCET High-Yield", "Definitions, differences, common MCQ traps, priority questions and case-scenario points."),
+        ]
+    txt = f"<b>📖 TOPIC</b>\n<b>{escape(topic)}</b>\n\n<b>📚 Subject:</b> {escape(subject)}\n\n"
+    txt += "\n\n".join(f"<b>{escape(h)}</b>\n{escape(v)}" for h,v in framework)
+    txt += "\n\n<b>🎯 QUICK REVISION</b>\n• Definition/keyword first\n• Cause → mechanism → finding → diagnosis → management link\n• Nursing priority + safety point\n• One case-scenario application\n• Revise red flags and common NORCET traps"
+    txt += "\n\n<b>📌 SOURCE STANDARD</b>\nINC curriculum + official exam guidance + recognised evidence-based clinical guidelines/textbooks.\n"
+    txt += "⚠️ Topic facts should be verified against the cited/approved source before being treated as clinical advice."
+    return txt
+
 def norcet_subject_info(subject):
     topics = norcet_subject_index(subject)
-    index_text = "\n".join(f"{i+1}. {x}" for i, x in enumerate(topics))
-    # Every clinical topic follows one consistent nursing/NORCET study framework.
-    framework = [
-        "1️⃣ Definition / Introduction",
-        "2️⃣ Causes / Etiology / Risk factors",
-        "3️⃣ Pathophysiology / Pathogenesis",
-        "4️⃣ Signs & Symptoms / Clinical features",
-        "5️⃣ Diagnosis / Diagnostic techniques & investigations",
-        "6️⃣ Medical management",
-        "7️⃣ Surgical management",
-        "8️⃣ Pharmacological management",
-        "9️⃣ Nursing management",
-        "🔟 Lifestyle modification / Diet / Prevention",
-        "1️⃣1️⃣ Nursing Care Plan: Assessment → Nursing Diagnosis → Goals → Interventions → Rationale → Evaluation",
-        "1️⃣2️⃣ Nurse Responsibility: monitoring, medication safety, infection control, patient education, documentation, escalation & emergency response",
-        "1️⃣3️⃣ Complications / Red flags / When to escalate",
-        "1️⃣4️⃣ NORCET high-yield points + case-scenario priorities",
-    ]
-    important = [
-        "⭐ Har disease me definition, etiology, pathophysiology aur clinical features ko connect karke padho.",
-        "⭐ Diagnosis me first-line/common tests, important findings aur nursing preparation/after-care yaad rakho.",
-        "⭐ Management ko medical + surgical + pharmacological + nursing + lifestyle buckets me revise karo.",
-        "⭐ Nursing care plan me NANDA-style nursing diagnosis, measurable goals, interventions, rationale aur evaluation cover karo.",
-        "⭐ Nurse responsibility me assessment, vitals, I/O, medication safety, infection prevention, education, documentation aur timely referral/escalation include karo.",
-        "⭐ Case-based NORCET question me ABC, priority, safety, red flags aur first nursing action identify karo.",
-    ]
-    quote = random.choice([
-        "🔥 Aaj ka 30 minute kal ki tension kam karta hai.",
-        "🧠 Read less, recall more.",
-        "💪 Consistency boring hoti hai, result boring nahi.",
-        "😂 Notes kholne ka notification aa gaya… ab ignore mat karna.",
-        "😄 Coffee optional, revision compulsory.",
-    ])
+    index_text = "\n".join(f"{i+1}. {escape(x)}" for i, x in enumerate(topics))
     return (
-        f"<b>📚 SUBJECT INDEX</b>\n<b>{escape(subject)}</b>\n\n"
-        f"{escape(index_text)}\n\n"
-        "<b>🩺 COMPLETE TOPIC FRAMEWORK</b>\n" +
-        "\n".join(framework) +
-        "\n\n<b>⭐ IMPORTANT</b>\n" + "\n".join(important) +
-        f"\n\n<b>💬 QUOTE / MEME</b>\n{quote}" +
-        "\n\n📌 INC curriculum + NORCET nursing-course level."
+        f"<b>📚 {escape(subject)}</b>\n\n"
+        "<b>⭐ Important Topics — ek topic select karo:</b>\n\n"
+        f"{index_text}\n\n"
+        "👇 Neeche topic button se complete topic framework kholo."
     )
 
 def norcet_subject_info_kb(code):
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("▶️ Start Study", callback_data=f"nstart_{code}")],
-        [InlineKeyboardButton("🔙 Subject List", callback_data=f"nback_{code[:1]}")],
-    ])
+    return norcet_topic_kb(code)
 
 
 def norcet_track_kb():
@@ -432,21 +457,45 @@ async def norcet_subject_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['subject'] = subject
     context.user_data['norcet_subject_code'] = code
 
-    # Show a short confirmation first, then send the complete subject index.
-    # Keeping the long index in separate messages prevents Telegram's 4096-char
-    # limit / HTML parsing from hiding the topics.
     await q.edit_message_text(
-        f"🇮🇳 <b>{escape(subject)}</b>\n\n📚 <b>Complete Subject Index</b> neeche diya hai.",
+        norcet_subject_info(subject),
         parse_mode=ParseMode.HTML,
         reply_markup=norcet_subject_info_kb(code)
     )
-    info = norcet_subject_info(subject)
-    for i in range(0, len(info), 3500):
-        await context.bot.send_message(
-            q.from_user.id,
-            info[i:i+3500],
-            parse_mode=ParseMode.HTML
-        )
+
+async def norcet_topic_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
+    parts = q.data.replace("ntopic_", "").rsplit("_", 1)
+    code = parts[0]
+    try:
+        topic_index = int(parts[1])
+    except (ValueError, IndexError):
+        await q.answer("Topic unavailable.", show_alert=True); return
+    subject = NORCET_SUBJECT_MAP.get(code, "General Nursing")
+    topics = norcet_subject_index(subject)
+    if topic_index < 0 or topic_index >= len(topics):
+        await q.answer("Topic unavailable.", show_alert=True); return
+    topic = topics[topic_index]
+    context.user_data["subject"] = subject
+    context.user_data["norcet_subject_code"] = code
+    await q.edit_message_text(
+        norcet_topic_info(subject, topic),
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🔙 Important Topics", callback_data=f"nbacktopic_{code}")],
+            [InlineKeyboardButton("▶️ Start Study Session", callback_data=f"nstart_{code}")]
+        ])
+    )
+
+async def norcet_backtopic_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
+    code = q.data.replace("nbacktopic_", "")
+    subject = NORCET_SUBJECT_MAP.get(code, "General Nursing")
+    await q.edit_message_text(
+        norcet_subject_info(subject),
+        parse_mode=ParseMode.HTML,
+        reply_markup=norcet_subject_info_kb(code)
+    )
 
 async def norcet_back_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
@@ -1256,7 +1305,7 @@ def main():
         app.add_error_handler(bot_error_handler)
         for cmd, fn in [("start", start), ("help", help_cmd), ("admin", admin_cmd), ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel), ("addq", addq), ("set", set_cmd), ("settime", settime_cmd), ("addadmin", addadmin), ("removeadmin", removeadmin), ("userinfo", userinfo), ("ban", ban), ("unban", unban), ("gift", gift), ("reply", reply_doubt), ("addquote", addquote), ("delquote", delquote), ("listquotes", listquotes), ("addmeme", addmeme), ("delmeme", delmeme), ("listmemes", listmemes)]:
             app.add_handler(CommandHandler(cmd, fn))
-        for pat, fn in [("^verify_join$", verify_join_cb), ("^cls_", class_cb), ("^ntrack_", norcet_track_cb), ("^subn_", norcet_subject_cb), ("^nstart_", norcet_start_cb), ("^nback_", norcet_back_cb), ("^tech_", technique_cb), ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb), ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb), ("^a_fj", fj_toggle), ("^a_", admin_cb)]:
+        for pat, fn in [("^verify_join$", verify_join_cb), ("^cls_", class_cb), ("^ntrack_", norcet_track_cb), ("^subn_", norcet_subject_cb), ("^ntopic_", norcet_topic_cb), ("^nbacktopic_", norcet_backtopic_cb), ("^nstart_", norcet_start_cb), ("^nback_", norcet_back_cb), ("^tech_", technique_cb), ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb), ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb), ("^a_fj", fj_toggle), ("^a_", admin_cb)]:
             app.add_handler(CallbackQueryHandler(fn, pattern=pat))
         app.add_handler(MessageHandler(filters.ChatType.CHANNEL, channel_post))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_router))
