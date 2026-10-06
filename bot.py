@@ -17,8 +17,8 @@ from flask import Flask
 import pytz
 
 # ================== CONFIG ==================
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "8704572580:AAEt_ju0z4mu5ZKVBdlmxPnF0nYb0vHMuQI")
-OWNER_ID = int(os.environ.get("OWNER_ID", 8783565195))
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
+OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
 DB_FILE = "bhushan_science.db"
 TIMEZONE = "Asia/Kolkata"
 
