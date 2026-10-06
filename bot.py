@@ -1473,24 +1473,28 @@ def main():
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_router))
         app.add_handler(MessageHandler(filters.PHOTO, msg_router))
         log.info("🤖 Bhushan Science Bot v3.2 starting...")
-        # Telegram allows only ONE getUpdates poller per bot token.
-        # During Render auto-deploy/restart, the old instance can briefly overlap
-        # with the new one and Telegram returns HTTP 409 Conflict. Do not crash;
-        # keep this process alive and retry until the other instance disappears.
-        first_poll = True
-        while True:
-            try:
-                log.info("📡 Starting Telegram polling...")
-                app.run_polling(
-                    allowed_updates=Update.ALL_TYPES,
-                    drop_pending_updates=first_poll,
-                    close_loop=False,
-                )
-                break
-            except Conflict as e:
-                first_poll = False
-                log.warning("⚠️ Telegram polling conflict (another instance is active). Retrying in 10s: %s", e)
-                time.sleep(10)
+        # Render-safe Telegram WEBHOOK mode.
+        # Webhooks and getUpdates are mutually exclusive, so this removes the
+        # recurring HTTP 409 conflict caused by competing polling instances.
+        render_url = (
+            os.environ.get("RENDER_EXTERNAL_URL", "").strip()
+            or os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
+        )
+        if not render_url:
+            raise RuntimeError("RENDER_EXTERNAL_URL/RENDER_EXTERNAL_HOSTNAME is required for webhook mode")
+        if not render_url.startswith("http"):
+            render_url = "https://" + render_url
+        webhook_url = render_url.rstrip("/") + "/telegram/webhook"
+        log.info("🌐 Starting Telegram webhook: %s", webhook_url)
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=int(os.environ.get("PORT", "8080")),
+            url_path="telegram/webhook",
+            webhook_url=webhook_url,
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True,
+            close_loop=False,
+        )
     except Exception as e:
         log.error(f"❌ BOT CRASHED: {e}")
         traceback.print_exc()
