@@ -1483,6 +1483,23 @@ async def msg_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if txt == "😂 Meme": await meme_view(update, context); return
     if txt == "❓ Help": await help_cmd(update, context); return
 
+    # Any other normal chat message goes to AI instead of being ignored.
+    if txt:
+        if not OPENAI_API_KEY:
+            await update.message.reply_text("⚠️ AI chat configured nahi hai. Admin ko OPENAI_API_KEY set karna hoga.")
+            return
+        try:
+            await context.bot.send_chat_action(chat_id=uid, action="typing")
+            answer = await ai_doubt_answer(None, txt)
+            if answer:
+                await update.message.reply_text("🤖 " + answer[:4000])
+            else:
+                await update.message.reply_text("⚠️ AI se reply generate nahi ho paya. Thodi der baad dobara try karo.")
+        except Exception as e:
+            log.exception("AI chat reply failed: %s", e)
+            await update.message.reply_text("⚠️ AI reply me temporary problem hui. Dobara try karo.")
+        return
+
 # ================== GLOBAL TELEGRAM ERROR HANDLER ==================
 async def bot_error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
     try:
