@@ -1252,7 +1252,8 @@ def main():
         threading.Thread(target=run_web, daemon=True).start()
         log.info("🌐 Web server thread started")
         init_db()
-        app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()\n        app.add_error_handler(bot_error_handler)
+        app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
+        app.add_error_handler(bot_error_handler)
         for cmd, fn in [("start", start), ("help", help_cmd), ("admin", admin_cmd), ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel), ("addq", addq), ("set", set_cmd), ("settime", settime_cmd), ("addadmin", addadmin), ("removeadmin", removeadmin), ("userinfo", userinfo), ("ban", ban), ("unban", unban), ("gift", gift), ("reply", reply_doubt), ("addquote", addquote), ("delquote", delquote), ("listquotes", listquotes), ("addmeme", addmeme), ("delmeme", delmeme), ("listmemes", listmemes)]:
             app.add_handler(CommandHandler(cmd, fn))
         for pat, fn in [("^verify_join$", verify_join_cb), ("^cls_", class_cb), ("^ntrack_", norcet_track_cb), ("^subn_", norcet_subject_cb), ("^nstart_", norcet_start_cb), ("^nback_", norcet_back_cb), ("^tech_", technique_cb), ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb), ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb), ("^a_fj", fj_toggle), ("^a_", admin_cb)]:
