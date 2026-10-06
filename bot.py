@@ -218,7 +218,6 @@ DETAILED_TOPIC_CONTENT = {
     "abnormal labour": {
         "gif": "https://tenor.com/n0aozzNlOo2.gif",
         "source": "WHO — Intrapartum care + WHO Labour Care Guide",
-        "source_url": "https://www.who.int/publications/i/item/9789240017566",
         "sections": [
             ("1️⃣ Definition / Introduction", "Abnormal labour means labour with abnormal progress or a maternal/fetal problem requiring closer assessment and, when indicated, intervention. It should not be judged only by a fixed cervical-dilatation rate."),
             ("2️⃣ Causes / Etiology / Risk factors", "🧠 Remember the 3 Ps: Power = uterine contractions; Passenger = fetal size, presentation and position; Passage = maternal pelvis/birth canal. Other contributors include malposition, malpresentation, cephalopelvic disproportion, uterine dysfunction, maternal exhaustion and dehydration."),
@@ -244,7 +243,7 @@ def norcet_topic_info(subject, topic):
         txt = f"<b>📖 TOPIC — {escape(topic)}</b>\n\n📚 <b>Subject:</b> {escape(subject)}\n🩺 <b>Detailed Clinical Notes</b>\n\n"
         txt += "\n\n".join(f"<b>{escape(h)}</b>\n{escape(v)}" for h, v in detailed["sections"])
         txt += "\n\n🎯 <b>QUICK REVISION</b>\n🧠 3 Ps → Power • Passenger • Passage\n❤️ Correlate maternal + fetal status with labour progress.\n🚨 Red flags → assess, escalate and document promptly."
-        txt += f"\n\n📚 <b>AUTHENTIC SOURCE</b>\n🌐 {escape(detailed['source'])}\n🔗 {escape(detailed['source_url'])}"
+        txt += f"\n\n📚 <b>AUTHENTIC SOURCE</b>\n🌐 {escape(detailed['source'])}"
         txt += "\n⚠️ Educational content; patient-specific management follows the treating team's/local protocol."
         return txt
 
