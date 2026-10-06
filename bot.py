@@ -64,6 +64,78 @@ MODES = {
     "laparwah": {"name": "😈 Laparwah", "start": "😤 <b>Chal be, padhna hai.</b>", "break_msg": "😏 <b>Break.</b>", "nag": ["🖕 Uth ja!", "😡 Kahan bhaag gaya?", "🤬 Reply kar!", "😤 Ma ko bata dunga.", "💀 Last warning."], "reward": "💪 <b>Chal be shabash!</b>", "punish": "🤡 <b>Dekh liya?</b> -30 points."},
 }
 
+# ================== INDIAN NURSING / NORCET CURRICULUM ==================
+# Based on INC's Revised B.Sc. Nursing curriculum (2020) and Revised GNM
+# curriculum, which are the nursing-course syllabi relevant to NORCET eligibility.
+# NORCET itself tests the nursing-course syllabus at the candidate's essential
+# qualification level; it is not a separate INC syllabus. AIIMS also specifies
+# General Knowledge & Aptitude for Stage I and nursing-course syllabus for the
+# nursing portion.
+INC_BSC_SYLLABUS_URL = "https://indiannursingcouncil.org/uploads/pdf/162581803399632881260e803b133fde.pdf"
+INC_GNM_SYLLABUS_URL = "https://indiannursingcouncil.org/uploads/pdf/16777602713172325806400970f3f105.pdf"
+
+NORCET_BSC_SUBJECTS = [
+    "Communicative English", "Applied Anatomy", "Applied Physiology",
+    "Applied Sociology", "Applied Psychology", "Nursing Foundations I",
+    "Applied Biochemistry", "Applied Nutrition and Dietetics",
+    "Nursing Foundations II", "Health/Nursing Informatics & Technology",
+    "Applied Microbiology & Infection Control including Safety",
+    "Pharmacology I", "Pathology I",
+    "Adult Health (Medical-Surgical) Nursing I with Integrated Pathophysiology",
+    "Pharmacology II", "Pathology II & Genetics",
+    "Adult Health Nursing II with Integrated Pathophysiology including Geriatric Nursing",
+    "Professionalism, Professional Values & Ethics including Bioethics",
+    "Child Health Nursing I", "Mental Health Nursing I",
+    "Community Health Nursing I including Environmental Science & Epidemiology",
+    "Educational Technology / Nursing Education",
+    "Introduction to Forensic Nursing & Indian Laws", "Child Health Nursing II",
+    "Mental Health Nursing II", "Nursing Management & Leadership",
+    "Midwifery / Obstetrics & Gynecology Nursing I", "Community Health Nursing II",
+    "Nursing Research & Statistics", "Midwifery / Obstetrics & Gynecology Nursing II",
+    "Internship / Intensive Practicum / Residency Posting",
+    "Mandatory modules: First Aid, BCLS, Health Assessment, Palliative Care,
+    "Essential Newborn Care (ENBC), FBNBC, IMNCI, PLS/PALS, Safe Delivery",
+]
+
+NORCET_GNM_SUBJECTS = [
+    "Bio-Science: Anatomy & Physiology", "Microbiology",
+    "Behavioural Sciences: Psychology & Sociology",
+    "Nursing Foundations / Fundamentals of Nursing", "First Aid",
+    "Community Health Nursing I", "Environmental Hygiene",
+    "Health Education & Communication Skills", "Nutrition", "English",
+    "Computer Education", "Medical-Surgical Nursing I",
+    "Medical-Surgical Nursing II", "Mental Health Nursing",
+    "Child Health Nursing", "Midwifery", "Gynaecological Nursing",
+    "Community Health Nursing II", "Nursing Education",
+    "Introduction to Research", "Professional Trends & Adjustment",
+    "Nursing Administration & Ward Management", "Clinical / Internship Training",
+]
+
+NORCET_SUBJECT_MAP = {}
+for _i, _s in enumerate(NORCET_BSC_SUBJECTS): NORCET_SUBJECT_MAP[f"B{_i}"] = _s
+for _i, _s in enumerate(NORCET_GNM_SUBJECTS): NORCET_SUBJECT_MAP[f"G{_i}"] = _s
+
+
+def norcet_track_kb():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🎓 INC B.Sc Nursing 2020", callback_data="ntrack_B")],
+        [InlineKeyboardButton("🏥 INC GNM 3-Year", callback_data="ntrack_G")],
+        [InlineKeyboardButton("📜 INC B.Sc Official Syllabus", url=INC_BSC_SYLLABUS_URL)],
+        [InlineKeyboardButton("📜 INC GNM Official Syllabus", url=INC_GNM_SYLLABUS_URL)],
+    ])
+
+
+def norcet_subject_kb(track):
+    prefix = "B" if track == "B" else "G"
+    subjects = NORCET_BSC_SUBJECTS if track == "B" else NORCET_GNM_SUBJECTS
+    rows, row = [], []
+    for i, subject in enumerate(subjects):
+        row.append(InlineKeyboardButton(subject[:45], callback_data=f"subn_{prefix}{i}"))
+        if len(row) == 2:
+            rows.append(row); row = []
+    if row: rows.append(row)
+    return InlineKeyboardMarkup(rows)
+
 # ================== BADGES ==================
 BADGES = {
     "first_session": {"name": "🥇 First Session", "desc": "Pehli padhai"},
@@ -192,8 +264,48 @@ async def verify_join_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def class_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query; await q.answer(); cls = q.data.replace("cls_", "")
     update_user(q.from_user.id, user_class=cls)
+    if cls == "NORCET":
+        context.user_data['norcet_track'] = None
+        await q.edit_message_text(
+            "🇮🇳 <b>NORCET Syllabus</b>\n\n"
+            "INC ke nursing curriculum ke according preparation track chuno.\n"
+            "NORCET mein nursing portion candidate ki essential qualification ke nursing-course syllabus par based hota hai.",
+            parse_mode=ParseMode.HTML,
+            reply_markup=norcet_track_kb()
+        )
+        return
     await q.edit_message_text(f"✅ Class: <b>{cls}</b>", parse_mode=ParseMode.HTML)
     await context.bot.send_message(q.from_user.id, "Ab padhai shuru karo 👇", reply_markup=main_menu_kb())
+
+async def norcet_track_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query; await q.answer()
+    track = q.data.replace("ntrack_", "")
+    context.user_data['norcet_track'] = track
+    name = "INC B.Sc Nursing 2020" if track == "B" else "INC GNM 3-Year"
+    subjects = NORCET_BSC_SUBJECTS if track == "B" else NORCET_GNM_SUBJECTS
+    await q.edit_message_text(
+        f"📚 <b>{name}</b>\n\n"
+        f"Total subjects/modules: <b>{len(subjects)}</b>\n"
+        "Subject select karo:",
+        parse_mode=ParseMode.HTML,
+        reply_markup=norcet_subject_kb(track)
+    )
+
+async def norcet_subject_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query; await q.answer()
+    code = q.data.replace("subn_", "")
+    subject = NORCET_SUBJECT_MAP.get(code, "General Nursing")
+    context.user_data['subject'] = subject
+    default = TECHNIQUES[context.user_data.get('technique', 'pomodoro')]['work'] * TECHNIQUES[context.user_data.get('technique', 'pomodoro')]['cycles']
+    await q.edit_message_text(
+        f"🇮🇳 <b>NORCET Subject:</b> {subject}\n\nKitni der?",
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton(f"Default ({default}m)", callback_data=f"dur_{default}"), InlineKeyboardButton("30 min", callback_data="dur_30")],
+            [InlineKeyboardButton("1 ghanta", callback_data="dur_60"), InlineKeyboardButton("2 ghante", callback_data="dur_120")],
+            [InlineKeyboardButton("3 ghante", callback_data="dur_180"), InlineKeyboardButton("Custom", callback_data="dur_custom")]
+        ])
+    )
 
 # ================== MODE ==================
 async def mode_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -219,7 +331,17 @@ async def padhai_shuru(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def technique_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query; await q.answer(); tech = q.data.replace("tech_", "")
     context.user_data['technique'] = tech; t = TECHNIQUES[tech]; total = t['work'] * t['cycles']
-    await q.edit_message_text(f"{t['name']}\n\n{t['desc']}\n\n⏱ {t['work']}min × {t['cycles']} = <b>{total} min</b>\n\nAb subject chuno:", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Physics", callback_data="sub_Physics"), InlineKeyboardButton("Chemistry", callback_data="sub_Chemistry")], [InlineKeyboardButton("Biology", callback_data="sub_Biology"), InlineKeyboardButton("Maths", callback_data="sub_Maths")], [InlineKeyboardButton("English", callback_data="sub_English"), InlineKeyboardButton("GK", callback_data="sub_GK")], [InlineKeyboardButton("Other", callback_data="sub_Other")]]))
+    user = get_user(q.from_user.id) or {}
+    if user.get('user_class') == "NORCET":
+        track = context.user_data.get('norcet_track')
+        if track:
+            await q.edit_message_text(
+                f"{t['name']}\\n\\n{t['desc']}\\n\\n⏱ {t['work']}min × {t['cycles']} = <b>{total} min</b>\\n\\n🇮🇳 NORCET subject chuno:",
+                parse_mode=ParseMode.HTML,
+                reply_markup=norcet_subject_kb(track)
+            )
+            return
+    await q.edit_message_text(f"{t['name']}\\n\\n{t['desc']}\\n\\n⏱ {t['work']}min × {t['cycles']} = <b>{total} min</b>\\n\\nAb subject chuno:", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Physics", callback_data="sub_Physics"), InlineKeyboardButton("Chemistry", callback_data="sub_Chemistry")], [InlineKeyboardButton("Biology", callback_data="sub_Biology"), InlineKeyboardButton("Maths", callback_data="sub_Maths")], [InlineKeyboardButton("English", callback_data="sub_English"), InlineKeyboardButton("GK", callback_data="sub_GK")], [InlineKeyboardButton("Other", callback_data="sub_Other")]]))
 
 async def subject_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query; await q.answer(); sub = q.data.replace("sub_", "")
@@ -817,7 +939,7 @@ def main():
         app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
         for cmd, fn in [("start", start), ("help", help_cmd), ("admin", admin_cmd), ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel), ("addq", addq), ("set", set_cmd), ("settime", settime_cmd), ("addadmin", addadmin), ("removeadmin", removeadmin), ("userinfo", userinfo), ("ban", ban), ("unban", unban), ("gift", gift), ("reply", reply_doubt), ("addquote", addquote), ("delquote", delquote), ("listquotes", listquotes), ("addmeme", addmeme), ("delmeme", delmeme), ("listmemes", listmemes)]:
             app.add_handler(CommandHandler(cmd, fn))
-        for pat, fn in [("^verify_join$", verify_join_cb), ("^cls_", class_cb), ("^tech_", technique_cb), ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb), ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb), ("^a_fj", fj_toggle), ("^a_", admin_cb)]:
+        for pat, fn in [("^verify_join$", verify_join_cb), ("^cls_", class_cb), ("^ntrack_", norcet_track_cb), ("^subn_", norcet_subject_cb), ("^tech_", technique_cb), ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb), ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb), ("^a_fj", fj_toggle), ("^a_", admin_cb)]:
             app.add_handler(CallbackQueryHandler(fn, pattern=pat))
         app.add_handler(MessageHandler(filters.ChatType.CHANNEL, channel_post))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_router))
