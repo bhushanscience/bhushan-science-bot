@@ -469,7 +469,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton(f"{'✅ ' if user.get('mode','serious') == 'serious' else ''}{MODES['serious']['name']}", callback_data="setm_serious")],
-            [InlineKeyboardButton(f"{'✅ ' if user.get('mode','serious') == 'focus' else ''}{MODES['focus']['name']}", callback_data="setm_focus")],
+            [InlineKeyboardButton(f"{'✅ ' if user.get('mode','serious') == 'laparwah' else ''}{MODES['laparwah']['name']}", callback_data="setm_laparwah")],
             [InlineKeyboardButton(f"{'✅ ' if user.get('mode','serious') == 'fun' else ''}{MODES['fun']['name']}", callback_data="setm_fun")]
         ])
     )
