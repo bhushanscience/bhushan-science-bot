@@ -218,6 +218,7 @@ DETAILED_TOPIC_CONTENT = {
     "abnormal labour": {
         "gif": "https://tenor.com/n0aozzNlOo2.gif",
         "source": "WHO — Intrapartum care + WHO Labour Care Guide",
+        "source_url": "https://www.who.int/publications/i/item/9789240017566",
         "sections": [
             ("1️⃣ Definition / Introduction", "Abnormal labour means labour with abnormal progress or a maternal/fetal problem requiring closer assessment and, when indicated, intervention. It should not be judged only by a fixed cervical-dilatation rate."),
             ("2️⃣ Causes / Etiology / Risk factors", "🧠 Remember the 3 Ps: Power = uterine contractions; Passenger = fetal size, presentation and position; Passage = maternal pelvis/birth canal. Other contributors include malposition, malpresentation, cephalopelvic disproportion, uterine dysfunction, maternal exhaustion and dehydration."),
@@ -243,7 +244,7 @@ def norcet_topic_info(subject, topic):
         txt = f"<b>📖 TOPIC — {escape(topic)}</b>\n\n📚 <b>Subject:</b> {escape(subject)}\n🩺 <b>Detailed Clinical Notes</b>\n\n"
         txt += "\n\n".join(f"<b>{escape(h)}</b>\n{escape(v)}" for h, v in detailed["sections"])
         txt += "\n\n🎯 <b>QUICK REVISION</b>\n🧠 3 Ps → Power • Passenger • Passage\n❤️ Correlate maternal + fetal status with labour progress.\n🚨 Red flags → assess, escalate and document promptly."
-        txt += f"\n\n📚 <b>AUTHENTIC SOURCE</b>\n🌐 {escape(detailed['source'])}"
+        txt += f"\n\n📚 <b>AUTHENTIC SOURCE</b>\n🌐 {escape(detailed['source'])}\n🔗 {escape(detailed['source_url'])}"
         txt += "\n⚠️ Educational content; patient-specific management follows the treating team's/local protocol."
         return txt
 
@@ -1515,7 +1516,7 @@ def main():
         app.add_error_handler(bot_error_handler)
         for cmd, fn in [("start", start), ("help", help_cmd), ("admin", admin_cmd), ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel), ("addq", addq), ("set", set_cmd), ("settime", settime_cmd), ("addadmin", addadmin), ("removeadmin", removeadmin), ("userinfo", userinfo), ("ban", ban), ("unban", unban), ("gift", gift), ("reply", reply_doubt), ("addquote", addquote), ("delquote", delquote), ("listquotes", listquotes), ("addmeme", addmeme), ("delmeme", delmeme), ("listmemes", listmemes)]:
             app.add_handler(CommandHandler(cmd, fn))
-        for pat, fn in [("^verify_join$", verify_join_cb), ("^cls_", class_cb), ("^ntrack_", norcet_track_cb), ("^subn_", norcet_subject_cb), ("^ninfo_", norcet_info_cb), ("^ntech_", norcet_technique_cb), ("^ntopic_", norcet_topic_cb), ("^nbacktopic_", norcet_backtopic_cb), ("^nstart_", norcet_start_cb), ("^nback_", norcet_back_cb), ("^tech_", technique_cb), ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb), ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb), ("^a_fj", fj_toggle), ("^a_", admin_cb)]:
+        for pat, fn in [("^cls_", class_cb), ("^ntrack_", norcet_track_cb), ("^subn_", norcet_subject_cb), ("^ninfo_", norcet_info_cb), ("^ntech_", norcet_technique_cb), ("^ntopic_", norcet_topic_cb), ("^nbacktopic_", norcet_backtopic_cb), ("^nstart_", norcet_start_cb), ("^nback_", norcet_back_cb), ("^tech_", technique_cb), ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb), ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb), ("^a_fj", fj_toggle), ("^a_", admin_cb)]:
             app.add_handler(CallbackQueryHandler(fn, pattern=pat))
         app.add_handler(MessageHandler(filters.ChatType.CHANNEL, channel_post))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_router))
