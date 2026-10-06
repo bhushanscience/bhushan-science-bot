@@ -7,7 +7,7 @@ from html import escape
 from urllib.request import Request, urlopen
 from datetime import datetime, timedelta, date, time as dtime
 from telegram import (
-    Update, InlineKeyboardButton, InlineKeyboardMarkup,
+    Update, InlineKeyboardButton, InlineKeyboardMarkup, WebAppInfo,
     ReplyKeyboardMarkup, KeyboardButton
 )
 from telegram.ext import (
@@ -24,6 +24,8 @@ BOT_TOKEN = os.environ.get("BOT_TOKEN")
 OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
 DB_FILE = "bhushan_science.db"
 TIMEZONE = "Asia/Kolkata"
+# Public HTTPS URL of the Telegram Mini App. Set this in Render after hosting webapp/.
+WEBAPP_URL = os.environ.get("WEBAPP_URL", "").strip()
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -454,8 +456,9 @@ def technique_selection_kb():
     return InlineKeyboardMarkup(btns)
 
 def main_menu_kb():
+    app_button = KeyboardButton("📱 Study App", web_app=WebAppInfo(url=WEBAPP_URL)) if WEBAPP_URL else KeyboardButton("📱 Study App")
     return ReplyKeyboardMarkup([
-        [KeyboardButton("📚 Padhai Shuru"), KeyboardButton("📸 Doubt Clear")],
+        [app_button, KeyboardButton("📚 Padhai Shuru"), KeyboardButton("📸 Doubt Clear")],
         [KeyboardButton("🎉 Join Fun"), KeyboardButton("🎯 Exam Countdown"), KeyboardButton("📅 Aaj ka Target")],
         [KeyboardButton("🏆 Points"), KeyboardButton("🏅 Leaderboard"), KeyboardButton("🎖️ Badges")],
         [KeyboardButton("🎭 Mode Badlo"), KeyboardButton("📊 Report")],
@@ -485,6 +488,34 @@ def admin_menu_kb():
         [InlineKeyboardButton("📊 Stats", callback_data="a_stats"), InlineKeyboardButton("👤 Admins", callback_data="a_admins")],
         [InlineKeyboardButton("🛡️ Ban/Unban", callback_data="a_ban"), InlineKeyboardButton("🎁 Gift Points", callback_data="a_gift")],
     ])
+
+# ================== MINI APP ==================
+def app_launch_kb():
+    if not WEBAPP_URL:
+        return InlineKeyboardMarkup([[InlineKeyboardButton("🌐 Mini App URL missing", callback_data="a_app_missing")]])
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🚀 Open Bhushan Science App", web_app=WebAppInfo(url=WEBAPP_URL))],
+        [InlineKeyboardButton("📚 Continue in Bot", callback_data="a_app_bot")],
+    ])
+
+async def app_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not WEBAPP_URL:
+        await update.message.reply_text(
+            "⚠️ Mini App abhi configured nahi hai.\n\n"
+            "Admin ko Render environment me WEBAPP_URL set karna hoga.",
+            parse_mode=ParseMode.HTML,
+        )
+        return
+    await update.message.reply_text(
+        "🚀 <b>Bhushan Science App</b>\n\n"
+        "🧠 Smart learning • 📝 Practice • 🎯 NORCET • 🤖 AI Doubt • 🏆 Progress\n\n"
+        "👇 Telegram ke andar app kholo!",
+        parse_mode=ParseMode.HTML,
+        reply_markup=app_launch_kb(),
+    )
+
+async def app_missing_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q=update.callback_query; await q.answer("Mini App URL configure nahi hua.", show_alert=True)
 
 # ================== START ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1471,6 +1502,7 @@ async def msg_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ Format: <code>Channel Name | https://t.me/yourchannel</code>", parse_mode=ParseMode.HTML)
         return
 
+    if txt == "📱 Study App": await app_cmd(update, context); return
     if txt == "📚 Padhai Shuru": await padhai_shuru(update, context); return
     if txt == "📸 Doubt Clear": await doubt_start(update, context); return
     if txt == "🎭 Mode Badlo": await mode_menu(update, context); return
@@ -1533,9 +1565,9 @@ def main():
         init_db()
         app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
         app.add_error_handler(bot_error_handler)
-        for cmd, fn in [("start", start), ("help", help_cmd), ("admin", admin_cmd), ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel), ("addq", addq), ("set", set_cmd), ("settime", settime_cmd), ("addadmin", addadmin), ("removeadmin", removeadmin), ("userinfo", userinfo), ("ban", ban), ("unban", unban), ("gift", gift), ("reply", reply_doubt), ("addquote", addquote), ("delquote", delquote), ("listquotes", listquotes), ("addmeme", addmeme), ("delmeme", delmeme), ("listmemes", listmemes)]:
+        for cmd, fn in [("start", start), ("app", app_cmd), ("help", help_cmd), ("admin", admin_cmd), ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel), ("addq", addq), ("set", set_cmd), ("settime", settime_cmd), ("addadmin", addadmin), ("removeadmin", removeadmin), ("userinfo", userinfo), ("ban", ban), ("unban", unban), ("gift", gift), ("reply", reply_doubt), ("addquote", addquote), ("delquote", delquote), ("listquotes", listquotes), ("addmeme", addmeme), ("delmeme", delmeme), ("listmemes", listmemes)]:
             app.add_handler(CommandHandler(cmd, fn))
-        for pat, fn in [("^cls_", class_cb), ("^ntrack_", norcet_track_cb), ("^subn_", norcet_subject_cb), ("^ninfo_", norcet_info_cb), ("^ntech_", norcet_technique_cb), ("^ntopic_", norcet_topic_cb), ("^nbacktopic_", norcet_backtopic_cb), ("^nstart_", norcet_start_cb), ("^nback_", norcet_back_cb), ("^tech_", technique_cb), ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb), ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb), ("^a_fj", fj_toggle), ("^a_", admin_cb)]:
+        for pat, fn in [("^a_app_missing$", app_missing_cb), ("^cls_", class_cb), ("^ntrack_", norcet_track_cb), ("^subn_", norcet_subject_cb), ("^ninfo_", norcet_info_cb), ("^ntech_", norcet_technique_cb), ("^ntopic_", norcet_topic_cb), ("^nbacktopic_", norcet_backtopic_cb), ("^nstart_", norcet_start_cb), ("^nback_", norcet_back_cb), ("^tech_", technique_cb), ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb), ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb), ("^a_fj", fj_toggle), ("^a_", admin_cb)]:
             app.add_handler(CallbackQueryHandler(fn, pattern=pat))
         app.add_handler(MessageHandler(filters.ChatType.CHANNEL, channel_post))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_router))
