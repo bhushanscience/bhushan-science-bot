@@ -1921,77 +1921,68 @@ async def post_init(app):
 def main():
     """Start the bot reliably on Render using long-polling.
 
-    Render still gets a tiny Flask health server so the Web Service stays
-    healthy/awake, while Telegram updates are consumed directly with polling.
-    This avoids stale/misconfigured webhook URLs and makes BOT_TOKEN changes
-    take effect on every fresh deployment.
+    Polling is deliberately used here: Telegram update delivery does not
+    depend on Render's webhook URL, proxy, or WEBHOOK_SECRET configuration.
     """
-    try:
-        if not BOT_TOKEN:
-            raise RuntimeError("BOT_TOKEN environment variable is not set")
+    if not BOT_TOKEN:
+        raise RuntimeError("BOT_TOKEN environment variable is not set")
 
-        if OWNER_ID <= 0:
-            log.warning("⚠️ OWNER_ID is not set; owner-only admin commands will be unavailable")
+    if OWNER_ID <= 0:
+        log.warning("⚠️ OWNER_ID is not set; owner-only admin commands will be unavailable")
 
-        init_db()
+    init_db()
 
-        app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
-        app.add_error_handler(bot_error_handler)
+    app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
+    app.add_error_handler(bot_error_handler)
 
-        # Commands
-        for cmd, fn in [
-            ("start", start), ("app", app_cmd), ("help", help_cmd), ("admin", admin_cmd),
-            ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel),
-            ("addq", addq), ("set", set_cmd), ("settime", settime_cmd),
-            ("addadmin", addadmin), ("removeadmin", removeadmin), ("userinfo", userinfo),
-            ("ban", ban), ("unban", unban), ("gift", gift), ("reply", reply_doubt),
-            ("addquote", addquote), ("delquote", delquote), ("listquotes", listquotes),
-            ("addmeme", addmeme), ("delmeme", delmeme), ("listmemes", listmemes), ("addpyq", addpyq)
-        ]:
-            app.add_handler(CommandHandler(cmd, fn))
+    for cmd, fn in [
+        ("start", start), ("app", app_cmd), ("help", help_cmd), ("admin", admin_cmd),
+        ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel),
+        ("addq", addq), ("set", set_cmd), ("settime", settime_cmd),
+        ("addadmin", addadmin), ("removeadmin", removeadmin), ("userinfo", userinfo),
+        ("ban", ban), ("unban", unban), ("gift", gift), ("reply", reply_doubt),
+        ("addquote", addquote), ("delquote", delquote), ("listquotes", listquotes),
+        ("addmeme", addmeme), ("delmeme", delmeme), ("listmemes", listmemes),
+        ("addpyq", addpyq)
+    ]:
+        app.add_handler(CommandHandler(cmd, fn))
 
-        # Callback handlers
-        for pat, fn in [
-            ("^a_app_missing$", app_missing_cb), ("^cls_", class_cb),
-            ("^ntrack_", norcet_track_cb), ("^cterm_", course_term_cb), ("^cpractice_", course_practice_cb), ("^tqa_", topic_answer_cb), ("^csubback_", course_subback_cb),
-            ("^csub_", course_subject_cb), ("^ctopic_", course_topic_cb), ("^cstart_", course_start_cb), ("^cback_", course_back_cb),
-            ("^subn_", norcet_subject_cb),
-            ("^ninfo_", norcet_info_cb), ("^ntech_", norcet_technique_cb),
-            ("^ntopic_", norcet_topic_cb), ("^nbacktopic_", norcet_backtopic_cb),
-            ("^nstart_", norcet_start_cb), ("^nback_", norcet_back_cb),
-            ("^tech_", technique_cb), ("^sess_pause_", session_pause_cb), ("^sess_resume_", session_resume_cb), ("^sess_stop_", session_stop_cb), ("^sub_", subject_cb), ("^dur_", duration_cb),
-            ("^ans_", answer_cb), ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb),
-            ("^a_fj", fj_toggle), ("^a_", admin_cb)
-        ]:
-            app.add_handler(CallbackQueryHandler(fn, pattern=pat))
+    for pat, fn in [
+        ("^a_app_missing$", app_missing_cb), ("^cls_", class_cb),
+        ("^ntrack_", norcet_track_cb), ("^cterm_", course_term_cb),
+        ("^cpractice_", course_practice_cb), ("^tqa_", topic_answer_cb),
+        ("^csubback_", course_subback_cb), ("^csub_", course_subject_cb),
+        ("^ctopic_", course_topic_cb), ("^cstart_", course_start_cb),
+        ("^cback_", course_back_cb), ("^subn_", norcet_subject_cb),
+        ("^ninfo_", norcet_info_cb), ("^ntech_", norcet_technique_cb),
+        ("^ntopic_", norcet_topic_cb), ("^nbacktopic_", norcet_backtopic_cb),
+        ("^nstart_", norcet_start_cb), ("^nback_", norcet_back_cb),
+        ("^tech_", technique_cb), ("^sess_pause_", session_pause_cb),
+        ("^sess_resume_", session_resume_cb), ("^sess_stop_", session_stop_cb),
+        ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb),
+        ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb),
+        ("^a_fj", fj_toggle), ("^a_", admin_cb)
+    ]:
+        app.add_handler(CallbackQueryHandler(fn, pattern=pat))
 
-        # Message handlers
-        app.add_handler(MessageHandler(filters.ChatType.CHANNEL, channel_post))
-        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_router))
-        app.add_handler(MessageHandler(filters.PHOTO, msg_router))
+    app.add_handler(MessageHandler(filters.ChatType.CHANNEL, channel_post))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_router))
+    app.add_handler(MessageHandler(filters.PHOTO, msg_router))
 
-        # Keep Render's HTTP service alive independently of Telegram polling.
-        threading.Thread(target=run_web, daemon=True, name="flask-health").start()
-        log.info("🌐 Flask health server started on port %s", os.environ.get("PORT", "8080"))
+    log.info("🤖 Bhushan Science Bot starting in POLLING mode")
+    log.info("📡 Telegram update handlers registered")
 
-        # Remove any old Telegram webhook before polling. This is important
-        # when the BOT_TOKEN was recently changed or a previous deployment
-        # used webhook mode.
-        async def clear_webhook():
-            await app.bot.delete_webhook(drop_pending_updates=False)
-            log.info("✅ Telegram webhook cleared; polling is active")
+    # Polling avoids webhook conflicts/configuration issues. Render's web
+    # process still needs an HTTP listener for health checks, so keep Flask
+    # alive in a daemon thread while python-telegram-bot polls Telegram.
+    port = int(os.environ.get("PORT", "10000"))
+    threading.Thread(target=run_web, daemon=True, name="health-server").start()
 
-        app.post_init = None
-        log.info("🤖 Bhushan Science Bot starting in POLLING mode...")
-        app.run_polling(
-            drop_pending_updates=False,
-            allowed_updates=Update.ALL_TYPES,
-            post_init=clear_webhook,
-        )
-
-    except Exception:
-        log.exception("❌ Fatal bot startup error")
-        raise
+    app.run_polling(
+        drop_pending_updates=False,
+        allowed_updates=Update.ALL_TYPES,
+        close_loop=False,
+    )
 
 if __name__ == "__main__":
     main()
