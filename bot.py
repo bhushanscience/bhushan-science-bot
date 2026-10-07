@@ -519,15 +519,26 @@ async def app_missing_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ================== START ==================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = update.effective_user.id; name = update.effective_user.first_name or "Student"
+    # IMPORTANT: /start must never be blocked by legacy force-join/channel settings.
+    # Older database rows/settings are ignored; onboarding starts immediately.
+    uid = update.effective_user.id
+    name = update.effective_user.first_name or "Student"
     touch_user(uid)
     create_user(uid, name)
-    user = get_user(uid)
-    if not user.get('verified'): update_user(uid, verified=1)
+    user = get_user(uid) or {}
+    update_user(uid, verified=1)
+
+    # Reset stale onboarding state from older bot versions so /start is
+    # deterministic even after a redeploy.
+    context.user_data['awaiting'] = None
     context.user_data['onboarding'] = True
     context.user_data['onboarding_step'] = 'mode'
+
+    log.info("🚀 /start accepted: user=%s legacy_force_join_bypassed=1", uid)
+
     await update.message.reply_text(
-        f"👋 Namaste <b>{name}</b>!\n\n🚀 <b>{get_setting('bot_name')}</b> setup karte hain.\n\n"
+        f"👋 Namaste <b>{escape(name)}</b>!\n\n"
+        f"🚀 <b>{escape(get_setting('bot_name', 'Bhushan Science Bot'))}</b> <b>LIVE</b> 🟢\n\n"
         "1️⃣ Mode → 2️⃣ Class → 3️⃣ Subject → 4️⃣ Technique\n\n"
         "🎭 <b>Step 1/4 — Mode chuno:</b>",
         parse_mode=ParseMode.HTML,
