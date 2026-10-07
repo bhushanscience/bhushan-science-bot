@@ -958,16 +958,50 @@ async def set_mode_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # ================== PADHAI ==================
+def random_quote():
+    """Return a fresh DB quote every time; never cache the previous quote."""
+    try:
+        c = db()
+        r = c.execute("SELECT text, author FROM quotes ORDER BY RANDOM() LIMIT 1").fetchone()
+        c.close()
+        if r:
+            return f"💭 <b>Thought</b>\n\n<i>{escape(r['text'])}</i>\n\n— {escape(r['author'] or 'Bhushan Science')}"
+    except Exception:
+        pass
+    return "💭 <b>Thought</b>\n\n<i>Consistency beats motivation. Aaj ka session aaj hi complete karo.</i>\n\n— Bhushan Science"
+
 async def padhai_shuru(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    touch_user(update.effective_user.id)
-    user = get_user(update.effective_user.id) or {}
-    context.user_data.pop('subject', None)
-    if user.get('user_class') == "NORCET":
-        track = context.user_data.get('norcet_track')
-        if track:
-            await update.message.reply_text("🇮🇳 <b>NORCET</b> — Subject chuno:", parse_mode=ParseMode.HTML, reply_markup=norcet_subject_kb(track))
-            return
-    await update.message.reply_text("📚 <b>Subject chuno</b>", parse_mode=ParseMode.HTML, reply_markup=subject_selection_kb())
+    uid = update.effective_user.id
+    touch_user(uid)
+    user = get_user(uid) or {}
+    # "Padhai Shuru" is a complete fresh onboarding flow, same as /start.
+    # Reset stale choices so the user gets Course/Class -> Term -> Subject ->
+    # Topic -> Technique -> Timer every time instead of jumping to an old subject.
+    context.user_data.clear()
+    context.user_data['onboarding'] = True
+    context.user_data['onboarding_step'] = 'mode'
+
+    name = update.effective_user.first_name or "Student"
+    mode = user.get('mode', 'serious')
+    if mode not in MODES:
+        mode = 'serious'
+    quote = random_quote()
+    joke = random.choice(SMART_JOKES)
+
+    await update.message.reply_text(
+        f"👋 <b>{escape(name)}</b>, chalo padhai shuru karte hain! 📚\n\n"
+        f"{quote}\n\n"
+        f"{joke}\n\n"
+        "🧭 <b>Study Flow:</b> Mode → Course/Class → Semester/Year → Subject → Topic → Technique + Timer\n\n"
+        "🎭 <b>Step 1 — Mode chuno:</b>\n"
+        "Serious = professional • Fun = frank • Laparwah = savage/badtameez",
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton(f"{'✅ ' if mode == 'serious' else ''}{MODES['serious']['name']}", callback_data="setm_serious")],
+            [InlineKeyboardButton(f"{'✅ ' if mode == 'laparwah' else ''}{MODES['laparwah']['name']}", callback_data="setm_laparwah")],
+            [InlineKeyboardButton(f"{'✅ ' if mode == 'fun' else ''}{MODES['fun']['name']}", callback_data="setm_fun")]
+        ])
+    )
 
 async def technique_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
@@ -1359,9 +1393,7 @@ async def exam_date_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ================== THOUGHT / MEME ==================
 async def thought_view(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    c = db(); r = c.execute("SELECT text, author FROM quotes ORDER BY RANDOM() LIMIT 1").fetchone(); c.close()
-    if not r: await update.message.reply_text("💭 Koi quote nahi."); return
-    await update.message.reply_text(f"💭 <b>Thought</b>\n\n<i>{r['text']}</i>\n\n— {r['author']}", parse_mode=ParseMode.HTML)
+    await update.message.reply_text(random_quote(), parse_mode=ParseMode.HTML)
 
 async def meme_view(update: Update, context: ContextTypes.DEFAULT_TYPE):
     c = db(); r = c.execute("SELECT file_id, caption FROM memes ORDER BY RANDOM() LIMIT 1").fetchone(); c.close()
