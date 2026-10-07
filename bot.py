@@ -474,6 +474,75 @@ async def course_topic_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         [InlineKeyboardButton("📜 Full INC Syllabus", url=COURSE_SYLLABUS_URLS[course])],
     ]))
 
+async def ai_topic_quiz(subject, topic, count=5):
+    if not OPENAI_API_KEY: return None
+    prompt = f'''Create {count} high-quality MCQs for a nursing student studying this exact topic.
+Subject: {subject}
+Topic: {topic}
+Return ONLY valid JSON as an array. Each item must have question, options (object with a,b,c,d), correct_option (a/b/c/d), explanation.
+Questions must be syllabus-aligned, clinically safe and suitable for B.Sc Nursing/GNM/NORCET. No patient-specific treatment or drug doses. No markdown.'''
+    payload={"model":OPENAI_VISION_MODEL,"messages":[
+        {"role":"system","content":"Accurate nursing exam question setter. Output only valid JSON."},
+        {"role":"user","content":prompt}],"temperature":0.2,"max_tokens":3500}
+    def call():
+        req=Request("https://api.openai.com/v1/chat/completions",data=json.dumps(payload).encode(),headers={"Authorization":"Bearer "+OPENAI_API_KEY,"Content-Type":"application/json"},method="POST")
+        with urlopen(req,timeout=90) as resp: return json.loads(resp.read().decode())
+    try:
+        raw=(await asyncio.to_thread(call))["choices"][0]["message"]["content"].strip()
+        if raw.startswith("```"):
+            raw=raw.split("```",2)[1]
+            if raw.lstrip().startswith("json"): raw=raw.lstrip()[4:]
+        items=json.loads(raw); valid=[]
+        for item in items:
+            opts=item.get("options",{}); cor=str(item.get("correct_option","")).lower()
+            if item.get("question") and all(opts.get(x) for x in "abcd") and cor in "abcd":
+                valid.append({"question":item["question"],"option_a":opts["a"],"option_b":opts["b"],"option_c":opts["c"],"option_d":opts["d"],"correct_option":cor,"explanation":item.get("explanation","")})
+        return valid[:count] or None
+    except Exception as e:
+        log.exception("Topic quiz generation failed: %s",e); return None
+
+async def course_practice_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q=update.callback_query; await q.answer(); touch_user(q.from_user.id)
+    _,course,term_s,subj_s,topic_s=q.data.split("_"); term,subj_idx,topic_idx=int(term_s),int(subj_s),int(topic_s)
+    subjects=COURSE_CURRICULUM.get(course,{}).get(term,[])
+    if subj_idx>=len(subjects): await q.answer("Subject unavailable.",show_alert=True); return
+    subject=subjects[subj_idx]; topics=norcet_subject_index(subject)
+    if topic_idx>=len(topics): await q.answer("Topic unavailable.",show_alert=True); return
+    topic=topics[topic_idx]; key=f"{course}_{term}_{subj_idx}_{topic_idx}"
+    c=db(); rows=c.execute("SELECT * FROM questions WHERE lower(subject)=lower(?) AND lower(topic)=lower(?) ORDER BY RANDOM() LIMIT 5",(subject,topic)).fetchall(); c.close()
+    quiz=[dict(r) for r in rows] if rows else None
+    if not quiz:
+        await q.edit_message_text(f"📝 <b>Optional Practice</b>\n\n📚 {escape(subject)}\n🧠 {escape(topic)}\n\n🤖 Questions generate ho rahe hain...",parse_mode=ParseMode.HTML)
+        quiz=await ai_topic_quiz(subject,topic,5)
+    if not quiz:
+        await q.edit_message_text("⚠️ Practice questions available nahi hain. OPENAI_API_KEY configure karo ya admin question bank me is topic ke MCQs add karo.",reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Topic",callback_data=f"ctopic_{course}_{term}_{subj_idx}_{topic_idx}")]])); return
+    context.user_data[f"tq_{key}"]=quiz; context.user_data[f"tqi_{key}"]=0; context.user_data[f"tqc_{key}"]=0
+    await q.edit_message_text(f"📝 <b>Optional Topic Practice</b>\n\n📚 {escape(subject)}\n🧠 {escape(topic)}\n\n5 MCQs — answer choose karo. Har answer ke baad <b>Right/Wrong + explanation</b> milega.",parse_mode=ParseMode.HTML)
+    await send_topic_question(context,q.from_user.id,key)
+
+async def send_topic_question(context,uid,key):
+    quiz=context.user_data.get(f"tq_{key}",[]); i=context.user_data.get(f"tqi_{key}",0)
+    if i>=len(quiz):
+        score=context.user_data.get(f"tqc_{key}",0)
+        await context.bot.send_message(uid,f"🏁 <b>Practice complete!</b>\n\n✅ Score: <b>{score}/{len(quiz)}</b>",parse_mode=ParseMode.HTML,reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Topic",callback_data=f"ctopic_{key.split('_')[0]}_{key.split('_')[1]}_{key.split('_')[2]}_{key.split('_')[3]}")]])); return
+    item=quiz[i]
+    btns=[[InlineKeyboardButton(f"{x.upper()}) {item[f'option_{x}']}",callback_data=f"tqa_{key}_{i}_{x}")] for x in "abcd"]
+    await context.bot.send_message(uid,f"📝 <b>Q{i+1}/{len(quiz)}</b>\n\n{escape(item['question'])}",parse_mode=ParseMode.HTML,reply_markup=InlineKeyboardMarkup(btns))
+
+async def topic_answer_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q=update.callback_query; await q.answer(); parts=q.data.split("_")
+    if len(parts)!=7: return
+    _,course,term_s,subj_s,topic_s,i_s,chosen=parts; key=f"{course}_{term_s}_{subj_s}_{topic_s}"
+    quiz=context.user_data.get(f"tq_{key}",[]); i=int(i_s)
+    if i>=len(quiz): return
+    item=quiz[i]; correct=item.get("correct_option","a").lower()
+    if chosen==correct:
+        context.user_data[f"tqc_{key}"]=context.user_data.get(f"tqc_{key}",0)+1
+        text=f"✅ <b>RIGHT!</b> 🎉\n\nCorrect: <b>{correct.upper()}) {escape(item[f'option_{correct}'])}</b>\n\n📖 {escape(item.get('explanation','Good job!'))}"
+    else:
+        text=f"❌ <b>WRONG!</b>\n\nYour answer: <b>{chosen.upper()}) {escape(item[f'option_{chosen}'])}</b>\nCorrect: <b>{correct.upper()}) {escape(item[f'option_{correct}'])}</b>\n\n📖 {escape(item.get('explanation','Review this concept once more.'))}"
+    await q.edit_message_text(text,parse_mode=ParseMode.HTML); context.user_data[f"tqi_{key}"]=i+1; await asyncio.sleep(1.2); await send_topic_question(context,q.from_user.id,key)
+
 async def course_start_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
     _, course, term_s, idx_s = q.data.split("_"); term, idx = int(term_s), int(idx_s)
