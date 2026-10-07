@@ -1564,6 +1564,14 @@ async def post_init(app):
     reschedule_jobs(app); log.info("✅ Jobs scheduled")
 
 def main():
+    """
+    Production startup.
+
+    Telegram delivery is intentionally WEBHOOK-FIRST.  The previous polling
+    deployment could leave an older process consuming getUpdates and replying
+    with stale code (for example the legacy A_TOOLSx2 force-join message).
+    Webhook mode makes Telegram deliver updates only to this deployment.
+    """
     try:
         if not BOT_TOKEN:
             raise RuntimeError("BOT_TOKEN environment variable is not set")
@@ -1572,9 +1580,11 @@ def main():
             log.warning("⚠️ OWNER_ID is not set; owner-only admin commands will be unavailable")
 
         init_db()
+
         app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
         app.add_error_handler(bot_error_handler)
 
+        # Commands
         for cmd, fn in [
             ("start", start), ("app", app_cmd), ("help", help_cmd), ("admin", admin_cmd),
             ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel),
@@ -1586,6 +1596,7 @@ def main():
         ]:
             app.add_handler(CommandHandler(cmd, fn))
 
+        # Callback handlers
         for pat, fn in [
             ("^a_app_missing$", app_missing_cb), ("^cls_", class_cb),
             ("^ntrack_", norcet_track_cb), ("^subn_", norcet_subject_cb),
@@ -1598,56 +1609,48 @@ def main():
         ]:
             app.add_handler(CallbackQueryHandler(fn, pattern=pat))
 
+        # Message handlers
         app.add_handler(MessageHandler(filters.ChatType.CHANNEL, channel_post))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_router))
         app.add_handler(MessageHandler(filters.PHOTO, msg_router))
 
         log.info("🤖 Bhushan Science Bot v3.2 starting...")
         log.info("📡 Telegram update handlers registered")
+        log.info("🛡️ Legacy force-join is disabled in /start")
 
-        # Polling is the default because it is the most reliable Render setup:
-        # it does not depend on RENDER_EXTERNAL_URL/WEBHOOK configuration.
-        # Set BOT_MODE=webhook only when a webhook deployment is intentionally
-        # configured and verified.
-        bot_mode = os.environ.get("BOT_MODE", "polling").strip().lower()
+        render_url = (
+            os.environ.get("RENDER_EXTERNAL_URL", "").strip()
+            or os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
+        )
+        if not render_url:
+            raise RuntimeError(
+                "Webhook deployment requires RENDER_EXTERNAL_URL or RENDER_EXTERNAL_HOSTNAME"
+            )
 
-        if bot_mode == "webhook":
-            render_url = (
-                os.environ.get("RENDER_EXTERNAL_URL", "").strip()
-                or os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
-            )
-            if not render_url:
-                raise RuntimeError(
-                    "BOT_MODE=webhook requires RENDER_EXTERNAL_URL or RENDER_EXTERNAL_HOSTNAME"
-                )
-            if not render_url.startswith("http"):
-                render_url = "https://" + render_url
-            webhook_url = render_url.rstrip("/") + "/telegram/webhook"
-            log.info("🌐 Starting Telegram webhook: %s", webhook_url)
-            app.run_webhook(
-                listen="0.0.0.0",
-                port=int(os.environ.get("PORT", "8080")),
-                url_path="telegram/webhook",
-                webhook_url=webhook_url,
-                allowed_updates=Update.ALL_TYPES,
-                drop_pending_updates=True,
-                close_loop=False,
-            )
-        else:
-            # Render Web Services expect an HTTP listener. Keep a tiny health
-            # server alive in a daemon thread while Telegram uses polling.
-            # This avoids webhook configuration entirely while still making
-            # the service health-checkable at / and /health.
-            threading.Thread(target=run_web, name="health-server", daemon=True).start()
-            log.info("🔄 Starting Telegram polling mode (Render-safe default)")
-            app.run_polling(
-                allowed_updates=Update.ALL_TYPES,
-                drop_pending_updates=True,
-                poll_interval=1.0,
-                timeout=30,
-                bootstrap_retries=5,
-                close_loop=False,
-            )
+        if not render_url.startswith(("http://", "https://")):
+            render_url = "https://" + render_url
+
+        webhook_path = "telegram/webhook"
+        webhook_url = render_url.rstrip("/") + "/" + webhook_path
+        port = int(os.environ.get("PORT", "8080"))
+
+        log.info("🌐 Production webhook mode enabled")
+        log.info("🔗 Telegram webhook endpoint: %s", webhook_url)
+        log.info("🩺 HTTP listener port: %s", port)
+
+        # run_webhook owns the Render HTTP port and calls Telegram's
+        # setWebhook internally.  This also prevents Telegram getUpdates
+        # polling from competing with this deployment.
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=port,
+            url_path=webhook_path,
+            webhook_url=webhook_url,
+            allowed_updates=Update.ALL_TYPES,
+            drop_pending_updates=True,
+            close_loop=False,
+        )
+
     except Exception:
         log.exception("❌ BOT CRASHED during startup/runtime")
         raise
