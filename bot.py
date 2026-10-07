@@ -1919,13 +1919,12 @@ async def post_init(app):
     reschedule_jobs(app); log.info("✅ Jobs scheduled")
 
 def main():
-    """
-    Production startup.
+    """Start the bot reliably on Render using long-polling.
 
-    Telegram delivery is intentionally WEBHOOK-FIRST.  The previous polling
-    deployment could leave an older process consuming getUpdates and replying
-    with stale code (for example the legacy A_TOOLSx2 force-join message).
-    Webhook mode makes Telegram deliver updates only to this deployment.
+    Render still gets a tiny Flask health server so the Web Service stays
+    healthy/awake, while Telegram updates are consumed directly with polling.
+    This avoids stale/misconfigured webhook URLs and makes BOT_TOKEN changes
+    take effect on every fresh deployment.
     """
     try:
         if not BOT_TOKEN:
@@ -1971,43 +1970,28 @@ def main():
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_router))
         app.add_handler(MessageHandler(filters.PHOTO, msg_router))
 
-        log.info("🤖 Bhushan Science Bot v3.2 starting...")
-        log.info("📡 Telegram update handlers registered")
-        log.info("🛡️ Legacy force-join is disabled in /start")
+        # Keep Render's HTTP service alive independently of Telegram polling.
+        threading.Thread(target=run_web, daemon=True, name="flask-health").start()
+        log.info("🌐 Flask health server started on port %s", os.environ.get("PORT", "8080"))
 
+        # Remove any old Telegram webhook before polling. This is important
+        # when the BOT_TOKEN was recently changed or a previous deployment
+        # used webhook mode.
+        async def clear_webhook():
+            await app.bot.delete_webhook(drop_pending_updates=False)
+            log.info("✅ Telegram webhook cleared; polling is active")
 
-        # Start the Telegram update receiver. Render supplies PORT and,
-        # when available, the public service URL/hostname. Webhook mode is
-        # preferred so only this deployment consumes Telegram updates.
-        port = int(os.environ.get("PORT", "10000"))
-        external_url = os.environ.get("RENDER_EXTERNAL_URL", "").strip().rstrip("/")
-        external_host = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
-        if not external_url and external_host:
-            external_url = f"https://{external_host}"
-
-        webhook_secret = os.environ.get("WEBHOOK_SECRET", "").strip() or None
-
-        if external_url:
-            webhook_url = f"{external_url}/telegram"
-            log.info("🌐 Starting Telegram webhook on %s", webhook_url)
-            app.run_webhook(
-                listen="0.0.0.0",
-                port=port,
-                url_path="telegram",
-                webhook_url=webhook_url,
-                drop_pending_updates=False,
-                secret_token=webhook_secret,
-            )
-        else:
-            # Local/non-Render fallback: polling keeps the bot usable when
-            # no public HTTPS endpoint is configured.
-            log.warning("⚠️ No RENDER_EXTERNAL_URL/HOSTNAME found; starting polling fallback.")
-            app.run_polling(drop_pending_updates=False, allowed_updates=Update.ALL_TYPES)
+        app.post_init = None
+        log.info("🤖 Bhushan Science Bot starting in POLLING mode...")
+        app.run_polling(
+            drop_pending_updates=False,
+            allowed_updates=Update.ALL_TYPES,
+            post_init=clear_webhook,
+        )
 
     except Exception:
         log.exception("❌ Fatal bot startup error")
         raise
-
 
 if __name__ == "__main__":
     main()
