@@ -467,12 +467,22 @@ async def course_topic_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try: await q.message.reply_animation(detailed["gif"], caption="🎬🩺 Visual revision — ab notes focus se padho! 📚✨")
         except Exception: pass
     body = await detailed_topic_info(subject, topic)
-    await q.edit_message_text(f"📖 {course_term_label(course, term)}\n📚 {subject}\n🧠 {topic}\n\n{body[:3700]}", reply_markup=InlineKeyboardMarkup([
-        [InlineKeyboardButton("📝 Optional Question Practice", callback_data=f"cpractice_{course}_{term}_{subj_idx}_{topic_idx}")],
-        [InlineKeyboardButton("🔙 Topic List", callback_data=f"csub_{course}_{term}_{subj_idx}")],
-        [InlineKeyboardButton("🎭 Technique + Timer", callback_data=f"cstart_{course}_{term}_{subj_idx}")],
-        [InlineKeyboardButton("📜 Full INC Syllabus", url=COURSE_SYLLABUS_URLS[course])],
-    ]))
+    header = f"📖 {course_term_label(course, term)}\n📚 {subject}\n🧠 {topic}\n\n"
+    full_text = header + body
+    chunks = [full_text[i:i+3800] for i in range(0, len(full_text), 3800)] or [header]
+    await q.edit_message_text(chunks[0])
+    for chunk in chunks[1:]:
+        await q.message.reply_text(chunk)
+    await q.message.reply_text(
+        "👇 <b>Next step choose karo:</b>",
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("📝 Optional Question Practice", callback_data=f"cpractice_{course}_{term}_{subj_idx}_{topic_idx}")],
+            [InlineKeyboardButton("🔙 Topic List", callback_data=f"csub_{course}_{term}_{subj_idx}")],
+            [InlineKeyboardButton("🎭 Technique + Timer", callback_data=f"cstart_{course}_{term}_{subj_idx}")],
+            [InlineKeyboardButton("📜 Full INC Syllabus", url=COURSE_SYLLABUS_URLS[course])],
+        ])
+    )
 
 async def ai_topic_quiz(subject, topic, count=5):
     if not OPENAI_API_KEY: return None
