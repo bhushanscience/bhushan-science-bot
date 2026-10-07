@@ -1560,46 +1560,80 @@ def main():
         if OWNER_ID <= 0:
             log.warning("⚠️ OWNER_ID is not set; owner-only admin commands will be unavailable")
 
-        # Telegram webhook owns the Render HTTP port; do not start a second
-        # Flask server on the same port.
         init_db()
         app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
         app.add_error_handler(bot_error_handler)
-        for cmd, fn in [("start", start), ("app", app_cmd), ("help", help_cmd), ("admin", admin_cmd), ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel), ("addq", addq), ("set", set_cmd), ("settime", settime_cmd), ("addadmin", addadmin), ("removeadmin", removeadmin), ("userinfo", userinfo), ("ban", ban), ("unban", unban), ("gift", gift), ("reply", reply_doubt), ("addquote", addquote), ("delquote", delquote), ("listquotes", listquotes), ("addmeme", addmeme), ("delmeme", delmeme), ("listmemes", listmemes)]:
+
+        for cmd, fn in [
+            ("start", start), ("app", app_cmd), ("help", help_cmd), ("admin", admin_cmd),
+            ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel),
+            ("addq", addq), ("set", set_cmd), ("settime", settime_cmd),
+            ("addadmin", addadmin), ("removeadmin", removeadmin), ("userinfo", userinfo),
+            ("ban", ban), ("unban", unban), ("gift", gift), ("reply", reply_doubt),
+            ("addquote", addquote), ("delquote", delquote), ("listquotes", listquotes),
+            ("addmeme", addmeme), ("delmeme", delmeme), ("listmemes", listmemes)
+        ]:
             app.add_handler(CommandHandler(cmd, fn))
-        for pat, fn in [("^a_app_missing$", app_missing_cb), ("^cls_", class_cb), ("^ntrack_", norcet_track_cb), ("^subn_", norcet_subject_cb), ("^ninfo_", norcet_info_cb), ("^ntech_", norcet_technique_cb), ("^ntopic_", norcet_topic_cb), ("^nbacktopic_", norcet_backtopic_cb), ("^nstart_", norcet_start_cb), ("^nback_", norcet_back_cb), ("^tech_", technique_cb), ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb), ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb), ("^a_fj", fj_toggle), ("^a_", admin_cb)]:
+
+        for pat, fn in [
+            ("^a_app_missing$", app_missing_cb), ("^cls_", class_cb),
+            ("^ntrack_", norcet_track_cb), ("^subn_", norcet_subject_cb),
+            ("^ninfo_", norcet_info_cb), ("^ntech_", norcet_technique_cb),
+            ("^ntopic_", norcet_topic_cb), ("^nbacktopic_", norcet_backtopic_cb),
+            ("^nstart_", norcet_start_cb), ("^nback_", norcet_back_cb),
+            ("^tech_", technique_cb), ("^sub_", subject_cb), ("^dur_", duration_cb),
+            ("^ans_", answer_cb), ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb),
+            ("^a_fj", fj_toggle), ("^a_", admin_cb)
+        ]:
             app.add_handler(CallbackQueryHandler(fn, pattern=pat))
+
         app.add_handler(MessageHandler(filters.ChatType.CHANNEL, channel_post))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_router))
         app.add_handler(MessageHandler(filters.PHOTO, msg_router))
+
         log.info("🤖 Bhushan Science Bot v3.2 starting...")
-        log.info("📡 Telegram update handlers registered; waiting for incoming updates...")
-        # Render-safe Telegram WEBHOOK mode.
-        # Webhooks and getUpdates are mutually exclusive, so this removes the
-        # recurring HTTP 409 conflict caused by competing polling instances.
-        render_url = (
-            os.environ.get("RENDER_EXTERNAL_URL", "").strip()
-            or os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
-        )
-        if not render_url:
-            raise RuntimeError("RENDER_EXTERNAL_URL/RENDER_EXTERNAL_HOSTNAME is required for webhook mode")
-        if not render_url.startswith("http"):
-            render_url = "https://" + render_url
-        webhook_url = render_url.rstrip("/") + "/telegram/webhook"
-        log.info("🌐 Starting Telegram webhook: %s", webhook_url)
-        app.run_webhook(
-            listen="0.0.0.0",
-            port=int(os.environ.get("PORT", "8080")),
-            url_path="telegram/webhook",
-            webhook_url=webhook_url,
-            allowed_updates=Update.ALL_TYPES,
-            drop_pending_updates=True,
-            close_loop=False,
-        )
-    except Exception as e:
-        log.exception("❌ BOT CRASHED during startup: %s", e)
-        # Do not swallow startup failures. Render must see a failed process
-        # so it can restart the service instead of leaving a dead bot running.
+        log.info("📡 Telegram update handlers registered")
+
+        # Polling is the default because it is the most reliable Render setup:
+        # it does not depend on RENDER_EXTERNAL_URL/WEBHOOK configuration.
+        # Set BOT_MODE=webhook only when a webhook deployment is intentionally
+        # configured and verified.
+        bot_mode = os.environ.get("BOT_MODE", "polling").strip().lower()
+
+        if bot_mode == "webhook":
+            render_url = (
+                os.environ.get("RENDER_EXTERNAL_URL", "").strip()
+                or os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
+            )
+            if not render_url:
+                raise RuntimeError(
+                    "BOT_MODE=webhook requires RENDER_EXTERNAL_URL or RENDER_EXTERNAL_HOSTNAME"
+                )
+            if not render_url.startswith("http"):
+                render_url = "https://" + render_url
+            webhook_url = render_url.rstrip("/") + "/telegram/webhook"
+            log.info("🌐 Starting Telegram webhook: %s", webhook_url)
+            app.run_webhook(
+                listen="0.0.0.0",
+                port=int(os.environ.get("PORT", "8080")),
+                url_path="telegram/webhook",
+                webhook_url=webhook_url,
+                allowed_updates=Update.ALL_TYPES,
+                drop_pending_updates=True,
+                close_loop=False,
+            )
+        else:
+            log.info("🔄 Starting Telegram polling mode (Render-safe default)")
+            app.run_polling(
+                allowed_updates=Update.ALL_TYPES,
+                drop_pending_updates=True,
+                poll_interval=1.0,
+                timeout=30,
+                bootstrap_retries=5,
+                close_loop=False,
+            )
+    except Exception:
+        log.exception("❌ BOT CRASHED during startup/runtime")
         raise
 
 if __name__ == "__main__":
