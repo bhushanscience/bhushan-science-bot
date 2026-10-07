@@ -20,12 +20,14 @@ from flask import Flask
 import pytz
 
 # ================== CONFIG ==================
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
+BOT_TOKEN = os.environ.get("BOT_TOKEN", "").strip()
 OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
 DB_FILE = "bhushan_science.db"
 TIMEZONE = "Asia/Kolkata"
 # Public HTTPS URL of the Telegram Mini App. Set this in Render after hosting webapp/.
 WEBAPP_URL = os.environ.get("WEBAPP_URL", "").strip()
+MEME_CHAT_ID = os.environ.get("MEME_CHAT_ID", "").strip()
+WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "").strip()
 STICKER_URL = os.environ.get("STICKER_URL", "https://media.githubusercontent.com/media/ilyhalight/telegram-emoji-effects/master/webp/U+1F389/0.webp").strip()
 ANIMATION_URL = os.environ.get("ANIMATION_URL", "https://i.imgur.com/LyHic3i.gif").strip()
 
@@ -519,13 +521,10 @@ async def course_practice_cb(update: Update, context: ContextTypes.DEFAULT_TYPE)
     subject=subjects[subj_idx]; topics=norcet_subject_index(subject)
     if topic_idx>=len(topics): await q.answer("Topic unavailable.",show_alert=True); return
     topic=topics[topic_idx]; key=f"{course}_{term}_{subj_idx}_{topic_idx}"
-    c=db(); rows=c.execute("SELECT * FROM questions WHERE lower(subject)=lower(?) AND lower(topic)=lower(?) ORDER BY RANDOM() LIMIT 5",(subject,topic)).fetchall(); c.close()
+    c=db(); rows=c.execute("""SELECT * FROM questions WHERE lower(subject)=lower(?) AND lower(topic)=lower(?) AND upper(COALESCE(source,''))='PYQ' ORDER BY RANDOM() LIMIT 5""",(subject,topic)).fetchall(); c.close()
     quiz=[dict(r) for r in rows] if rows else None
     if not quiz:
-        await q.edit_message_text(f"📝 <b>Optional Practice</b>\n\n📚 {escape(subject)}\n🧠 {escape(topic)}\n\n🤖 Questions generate ho rahe hain...",parse_mode=ParseMode.HTML)
-        quiz=await ai_topic_quiz(subject,topic,5)
-    if not quiz:
-        await q.edit_message_text("⚠️ Practice questions available nahi hain. OPENAI_API_KEY configure karo ya admin question bank me is topic ke MCQs add karo.",reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Topic",callback_data=f"ctopic_{course}_{term}_{subj_idx}_{topic_idx}")]])); return
+        await q.edit_message_text("⚠️ Is topic ke liye verified PYQ available nahi hai.\n\nAI-generated question ko PYQ ke naam se nahi dikhaya jayega.",reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Topic",callback_data=f"ctopic_{course}_{term}_{subj_idx}_{topic_idx}")]])); return
     context.user_data[f"tq_{key}"]=quiz; context.user_data[f"tqi_{key}"]=0; context.user_data[f"tqc_{key}"]=0
     await q.edit_message_text(f"📝 <b>Optional Topic Practice</b>\n\n📚 {escape(subject)}\n🧠 {escape(topic)}\n\n5 MCQs — answer choose karo. Har answer ke baad <b>Right/Wrong + explanation</b> milega.",parse_mode=ParseMode.HTML)
     await send_topic_question(context,q.from_user.id,key)
@@ -584,8 +583,8 @@ def init_db():
     cur.execute('''CREATE TABLE IF NOT EXISTS users(user_id INTEGER PRIMARY KEY, name TEXT, age INTEGER, user_class TEXT, stream TEXT, exam_target TEXT, points INTEGER DEFAULT 0, streak INTEGER DEFAULT 0, last_study DATE, total_minutes INTEGER DEFAULT 0, is_banned INTEGER DEFAULT 0, verified INTEGER DEFAULT 0, current_session INTEGER DEFAULT 0, quiz_correct INTEGER DEFAULT 0, sessions_done INTEGER DEFAULT 0, mode TEXT DEFAULT 'serious', techniques_used TEXT DEFAULT '', joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     cur.execute('''CREATE TABLE IF NOT EXISTS admins(user_id INTEGER PRIMARY KEY, added_by INTEGER, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     cur.execute('''CREATE TABLE IF NOT EXISTS channels(id INTEGER PRIMARY KEY AUTOINCREMENT, channel_id TEXT UNIQUE, channel_name TEXT, channel_link TEXT, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-    cur.execute('''CREATE TABLE IF NOT EXISTS questions(id INTEGER PRIMARY KEY AUTOINCREMENT, subject TEXT, topic TEXT, question TEXT, option_a TEXT, option_b TEXT, option_c TEXT, option_d TEXT, correct_option TEXT, explanation TEXT, difficulty TEXT, class_level TEXT, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-    cur.execute('''CREATE TABLE IF NOT EXISTS sessions(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, subject TEXT, technique TEXT, mode TEXT, planned_minutes INTEGER, actual_minutes INTEGER DEFAULT 0, start_time TIMESTAMP, end_time TIMESTAMP, status TEXT DEFAULT 'running', q_asked INTEGER DEFAULT 0, q_correct INTEGER DEFAULT 0, photo_file_id TEXT)''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS questions(id INTEGER PRIMARY KEY AUTOINCREMENT, subject TEXT, topic TEXT, question TEXT, option_a TEXT, option_b TEXT, option_c TEXT, option_d TEXT, correct_option TEXT, explanation TEXT, difficulty TEXT, class_level TEXT, source TEXT DEFAULT 'ADMIN', exam TEXT, year INTEGER, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS sessions(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, subject TEXT, technique TEXT, mode TEXT, planned_minutes INTEGER, actual_minutes INTEGER DEFAULT 0, start_time TIMESTAMP, end_time TIMESTAMP, status TEXT DEFAULT 'running', q_asked INTEGER DEFAULT 0, q_correct INTEGER DEFAULT 0, photo_file_id TEXT, remaining_seconds INTEGER DEFAULT 0, paused_at TIMESTAMP)''')
     cur.execute('''CREATE TABLE IF NOT EXISTS doubts(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, subject TEXT, question_text TEXT, photo_file_id TEXT, answer TEXT, status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     cur.execute('''CREATE TABLE IF NOT EXISTS points_log(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, points INTEGER, reason TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     cur.execute('''CREATE TABLE IF NOT EXISTS quotes(id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT, author TEXT, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
@@ -595,12 +594,11 @@ def init_db():
     cur.execute('''CREATE TABLE IF NOT EXISTS daily_quiz(id INTEGER PRIMARY KEY AUTOINCREMENT, quiz_date DATE UNIQUE, question TEXT, option_a TEXT, option_b TEXT, option_c TEXT, option_d TEXT, correct_option TEXT, explanation TEXT)''')
     cur.execute('''CREATE TABLE IF NOT EXISTS quiz_answers(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, quiz_date DATE, chosen TEXT, correct INTEGER, UNIQUE(user_id, quiz_date))''')
     cur.execute('''CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT)''')
-    defaults = {'force_join_enabled': '0', 'force_join_configured': '0', 'join_fun_name': '', 'join_fun_link': '', 'reward_points': '10', 'punishment_points': '20', 'nag_message_count': '5', 'daily_points_target': '50', 'bot_name': 'Bhushan Science', 'welcome_msg': 'Padhai karo!', 'quote_time': '07:00', 'meme_time': '21:00', 'quiz_time': '20:00', 'break_reminder': '1'}
+    defaults = {'force_join_enabled': '0', 'force_join_configured': '0', 'join_fun_name': '', 'join_fun_link': '', 'reward_points': '10', 'punishment_points': '20', 'nag_message_count': '5', 'daily_points_target': '50', 'bot_name': 'Bhushan Science', 'welcome_msg': 'Padhai karo!', 'quote_time': '07:00', 'meme_time': '21:00', 'quiz_time': '20:00', 'break_reminder': '1', 'auto_meme_enabled': '1', 'meme_chat_id': MEME_CHAT_ID, 'auto_meme_interval': '1800'}
     for k, v in defaults.items(): cur.execute("INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)", (k, v))
-    try:
-        cur.execute("ALTER TABLE users ADD COLUMN last_active TIMESTAMP")
-    except sqlite3.OperationalError:
-        pass
+    for _sql in ["ALTER TABLE users ADD COLUMN last_active TIMESTAMP","ALTER TABLE questions ADD COLUMN source TEXT DEFAULT 'ADMIN'","ALTER TABLE questions ADD COLUMN exam TEXT","ALTER TABLE questions ADD COLUMN year INTEGER","ALTER TABLE sessions ADD COLUMN remaining_seconds INTEGER DEFAULT 0","ALTER TABLE sessions ADD COLUMN paused_at TIMESTAMP"]:
+        try: cur.execute(_sql)
+        except sqlite3.OperationalError: pass
     cur.execute("INSERT OR IGNORE INTO admins(user_id,added_by) VALUES(?,?)", (OWNER_ID, OWNER_ID))
     for q, a in [("Padhai karne wale ke paas waqt nahi hota, aur na padhne wale ke paas bahane.", "Bhushan Science"), ("Success ka shortcut sirf mehnat aur consistency hai.", "Bhushan Science"), ("Jo aaj padhega, wahi kal topper banega.", "Bhushan Science")]:
         cur.execute("INSERT INTO quotes(text,author) SELECT ?,? WHERE NOT EXISTS(SELECT 1 FROM quotes)", (q, a))
@@ -1437,6 +1435,18 @@ async def addq(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("✅ Question added!")
     except Exception as e: await update.message.reply_text(f"❌ Format error: {e}")
 
+async def addpyq(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user.id): return
+    try:
+        a=[x.strip() for x in update.message.text.split(" ",1)[1].split("|")]
+        if len(a)<12: raise ValueError("12 fields required")
+        sub,top,q,oa,ob,oc,od,cor,expl,cls,year_s,exam=a[:12]
+        year=int(year_s)
+        if cor.lower() not in ("a","b","c","d"): raise ValueError("Correct must be A/B/C/D")
+        c=db(); c.execute("""INSERT INTO questions(subject,topic,question,option_a,option_b,option_c,option_d,correct_option,explanation,class_level,source,exam,year) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",(sub,top,q,oa,ob,oc,od,cor.lower(),expl,cls,"PYQ",exam,year)); c.commit(); c.close()
+        await update.message.reply_text(f"✅ Verified PYQ added — {exam} {year}")
+    except Exception as e: await update.message.reply_text(f"❌ /addpyq Subject|Topic|Q|A|B|C|D|Correct|Explanation|Class|Year|Exam\n{e}")
+
 async def addquote(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
     try:
@@ -1831,7 +1841,7 @@ def main():
             ("addadmin", addadmin), ("removeadmin", removeadmin), ("userinfo", userinfo),
             ("ban", ban), ("unban", unban), ("gift", gift), ("reply", reply_doubt),
             ("addquote", addquote), ("delquote", delquote), ("listquotes", listquotes),
-            ("addmeme", addmeme), ("delmeme", delmeme), ("listmemes", listmemes)
+            ("addmeme", addmeme), ("delmeme", delmeme), ("listmemes", listmemes), ("addpyq", addpyq)
         ]:
             app.add_handler(CommandHandler(cmd, fn))
 
@@ -1889,6 +1899,7 @@ def main():
             webhook_url=webhook_url,
             allowed_updates=Update.ALL_TYPES,
             drop_pending_updates=True,
+            secret_token=(WEBHOOK_SECRET or None),
             close_loop=False,
         )
 
