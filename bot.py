@@ -26,6 +26,8 @@ DB_FILE = "bhushan_science.db"
 TIMEZONE = "Asia/Kolkata"
 # Public HTTPS URL of the Telegram Mini App. Set this in Render after hosting webapp/.
 WEBAPP_URL = os.environ.get("WEBAPP_URL", "").strip()
+STICKER_URL = os.environ.get("STICKER_URL", "https://raw.githubusercontent.com/bhushanscience/bhushan-science-bot/main/assets/focus_sticker.webp").strip()
+ANIMATION_URL = os.environ.get("ANIMATION_URL", "https://raw.githubusercontent.com/bhushanscience/bhushan-science-bot/main/assets/study.gif").strip()
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -63,10 +65,46 @@ TECHNIQUES = {
 
 # ================== MODES ==================
 MODES = {
-    "serious": {"name": "🎯 Serious", "start": "✅ Session started.", "break_msg": "⏸️ <b>Break Time</b>", "nag": ["⚠️ Reply karo.", "⏰ Waqt gaya.", "📢 Points katenge."], "reward": "🎉 Shabash!", "punish": "❌ Session fail."},
-    "fun": {"name": "😄 Fun", "start": "🚀 Chalo shuru!", "break_msg": "☕ <b>Break!</b>", "nag": ["😂 Utho!", "👀 Reply karo!", "🎈 Focus!"], "reward": "🥳 Topper banega!", "punish": "🙃 Next time pakka!"},
-    "laparwah": {"name": "😈 Laparwah", "start": "😤 <b>Chal be, padhna hai.</b>", "break_msg": "😏 <b>Break.</b>", "nag": ["🖕 Uth ja!", "😡 Kahan bhaag gaya?", "🤬 Reply kar!", "😤 Ma ko bata dunga.", "💀 Last warning."], "reward": "💪 <b>Chal be shabash!</b>", "punish": "🤡 <b>Dekh liya?</b> -30 points."},
+    "serious": {"name": "🎯 Serious", "start": "✅ Study session started. Please maintain focused, professional study.", "break_msg": "⏸️ <b>Break Time</b> — hydrate, reset and return on time.", "nag": ["⚠️ Session is still active. Please complete the study task.", "⏰ Please return to your study session.", "📚 Consistency matters. Complete the scheduled work."], "reward": "🎉 Excellent work.", "punish": "❌ Session incomplete."},
+    "fun": {"name": "😄 Fun", "start": "🚀 Chalo, books kholo aur brain ko warm-up do!", "break_msg": "☕ <b>Break!</b> Thoda relax, phir wapas grind.", "nag": ["😂 Oye scholar, comeback!", "👀 Focus kidhar gaya?", "🎈 Chalo bhai, session complete karo!"], "reward": "🥳 Nice! Brain ne attendance laga di.", "punish": "🙃 Session chhod diya? Brain ne tumhe seen kar diya."},
+    "laparwah": {"name": "😈 Laparwah", "start": "😈 Abe chal, bahane band. Padhai shuru.", "break_msg": "😏 <b>Break.</b> Zyada hawa mein mat udna.", "nag": ["😤 Abe baklol, session chal raha hai!", "🤨 Kahan gayab ho gaya, chomu?", "😡 Oye nalayak, timer dekh!", "🙄 Padhne aaye the ya attendance lagane?", "💀 Last warning, bhaagoda!"], "reward": "🔥 Wah be! Aaj dimaag ne kaam kiya.", "punish": "🤡 Session adhura chhod diya. Ab 7 points ka fine lagega."},
 }
+
+SMART_JOKES = [
+    "🧠 Smart joke: Nurse ne BP machine se kaha — “Tumhara pressure mujhe bhi pressure de raha hai!” 😄",
+    "🧠 Smart joke: Anatomy student ka favourite map? — “Body ka internal Google Maps.” 😂",
+    "🧠 Smart joke: Pharmacology student ne kaha — “Meri coffee ki dose PRN hai: jab tak jagta rahun.” ☕😄",
+    "🧠 Smart joke: Nursing student ka Wi‑Fi password? — “HandHygiene123”, kyunki infection control first! 🧼😂",
+    "🧠 Smart joke: Physiology ne poocha, “Heart ka kaam?” Student bola — “Beat drop karna.” ❤️😂",
+]
+
+ROAST_LINES = [
+    "😈 Abe topper, dimaag attendance pe tha kya?", "🤡 Baklol mode activated — timer ko ignore kar diya!",
+    "😤 Oye chomu, padhne aaye the ya hawa khane?", "🙄 Nalayak scholar, kitab tumhe miss kar rahi hai.",
+    "😂 Timer chal raha tha aur tum gayab — wah talent!", "😡 Abe bhaagode, session complete karna tha!",
+    "🤨 Dimaag bola padh, tumne bola kal se. Classic.", "💀 Bhai, consistency ko block kyun kar diya?",
+    "😈 Oye genius, excuse-making mein distinction mil jayega.", "🤡 Session chhod ke topper banoge? Wah confidence!",
+    "😤 Abe susti ke brand ambassador, wapas aa.", "🙄 Notes khule reh gaye, student offline ho gaya.",
+    "😂 Tumhara focus aur Wi‑Fi signal — dono unstable.", "😡 Oye chomu, timer se hide nahi kar sakte.",
+    "💀 Padhai se itni dushmani kis baat ki?", "😈 Nalayak, reward ke 5 points ka sapna dekh rahe the na?",
+    "🤨 Session complete karna tha, disappearance act nahi.", "🤡 Aaj ka medal: ‘Best at avoiding study’.",
+    "😤 Abe scholar, excuses ka syllabus khatam kar.", "😂 Brain: study. You: later. Brain: seriously?",
+    "🙄 Kitab tumhari taraf dekh ke soch rahi hai — ye kaun hai?", "😈 Oye baklol, comeback kar.",
+    "💀 Timer ne tumhe hara diya. Shame, scholar.", "🤡 Padhai ko ghost karke topper nahi bante.",
+    "😤 Last roast: ab kal se nahi, abhi se padh!",
+]
+
+async def send_style_media(context, uid, mode):
+    try:
+        if mode in ("fun", "laparwah") and STICKER_URL:
+            await context.bot.send_sticker(uid, STICKER_URL)
+    except Exception:
+        pass
+    try:
+        if mode in ("fun", "laparwah") and ANIMATION_URL:
+            await context.bot.send_animation(uid, ANIMATION_URL, caption="🎬 Focus mode ON!")
+    except Exception:
+        pass
 
 # ================== INDIAN NURSING / NORCET CURRICULUM ==================
 # Based on INC's Revised B.Sc. Nursing curriculum (2020) and Revised GNM
@@ -342,6 +380,124 @@ BADGES = {
     "technique_master": {"name": "🎓 Technique Master", "desc": "Saari techniques"},
 }
 
+# ================== COURSE CURRICULUM ==================
+COURSE_SYLLABUS_URLS = {
+    "BSC": INC_BSC_SYLLABUS_URL,
+    "GNM": "https://indiannursingcouncil.org/publications",
+}
+
+COURSE_CURRICULUM = {
+    "BSC": {
+        1: ["Communicative English","Applied Anatomy","Applied Physiology","Applied Sociology","Applied Psychology","Nursing Foundations I"],
+        2: ["Applied Biochemistry","Applied Nutrition and Dietetics","Nursing Foundations II","Health/Nursing Informatics & Technology"],
+        3: ["Applied Microbiology & Infection Control including Safety","Pharmacology I","Pathology I","Adult Health (Medical-Surgical) Nursing I with Integrated Pathophysiology"],
+        4: ["Pharmacology II","Pathology II & Genetics","Adult Health Nursing II with Integrated Pathophysiology including Geriatric Nursing","Professionalism, Professional Values & Ethics including Bioethics"],
+        5: ["Child Health Nursing I","Mental Health Nursing I","Community Health Nursing I including Environmental Science & Epidemiology","Educational Technology / Nursing Education","Introduction to Forensic Nursing & Indian Laws"],
+        6: ["Child Health Nursing II","Mental Health Nursing II","Nursing Management & Leadership","Midwifery / Obstetrics & Gynecology Nursing I"],
+        7: ["Community Health Nursing II","Nursing Research & Statistics","Midwifery / Obstetrics & Gynecology Nursing II"],
+        8: ["Internship — Community Health Nursing (4 weeks)","Internship — Adult Health Nursing (6 weeks)","Internship — Child Health Nursing (4 weeks)","Internship — Mental Health Nursing (4 weeks)","Internship — Midwifery (4 weeks)"],
+    },
+    "GNM": {
+        1: ["Bio-Science: Anatomy & Physiology","Microbiology","Behavioural Sciences: Psychology & Sociology","Nursing Foundations / Fundamentals of Nursing","First Aid","Community Health Nursing I","Environmental Hygiene","Health Education & Communication Skills","Nutrition","English","Computer Education"],
+        2: ["Medical-Surgical Nursing I","Medical-Surgical Nursing II","Mental Health Nursing","Child Health Nursing"],
+        3: ["Midwifery & Gynaecological Nursing","Community Health Nursing II","Nursing Education","Introduction to Research","Statistics","Professional Trends & Adjustment","Nursing Administration & Ward Management","Clinical / Internship Training"],
+    },
+}
+
+def course_label(course):
+    return "B.Sc Nursing (INC 2020)" if course == "BSC" else "GNM Nursing (INC 2015)"
+
+def course_term_label(course, term):
+    return f"Semester {term}" if course == "BSC" else f"Year {term}"
+
+def course_terms_kb(course):
+    max_term = 8 if course == "BSC" else 3
+    rows, row = [], []
+    for i in range(1, max_term + 1):
+        row.append(InlineKeyboardButton(f"📚 {course_term_label(course, i)}", callback_data=f"cterm_{course}_{i}"))
+        if len(row) == 2: rows.append(row); row = []
+    if row: rows.append(row)
+    rows.append([InlineKeyboardButton("📜 Full INC Syllabus", url=COURSE_SYLLABUS_URLS[course])])
+    return InlineKeyboardMarkup(rows)
+
+def course_subject_kb(course, term):
+    subjects = COURSE_CURRICULUM[course][term]
+    rows = []
+    for i, subject in enumerate(subjects):
+        rows.append([InlineKeyboardButton(f"📖 {i+1}. {subject[:34]}", callback_data=f"csub_{course}_{term}_{i}")])
+    rows.append([InlineKeyboardButton("📜 Full INC Syllabus", url=COURSE_SYLLABUS_URLS[course])])
+    rows.append([InlineKeyboardButton("🔙 Semesters/Years", callback_data=f"cback_{course}")])
+    return InlineKeyboardMarkup(rows)
+
+def course_topic_kb(course, term, subject_index, subject):
+    topics = norcet_subject_index(subject)
+    rows = [[InlineKeyboardButton(f"🧠 {i+1}. {topic[:48]}", callback_data=f"ctopic_{course}_{term}_{subject_index}_{i}")] for i, topic in enumerate(topics)]
+    rows.append([InlineKeyboardButton("🎭 Technique + Timer", callback_data=f"cstart_{course}_{term}_{subject_index}")])
+    rows.append([InlineKeyboardButton("📜 Full INC Syllabus", url=COURSE_SYLLABUS_URLS[course])])
+    rows.append([InlineKeyboardButton("🔙 Subjects", callback_data=f"csubback_{course}_{term}")])
+    return InlineKeyboardMarkup(rows)
+
+async def course_term_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
+    _, course, term_s = q.data.split("_"); term = int(term_s)
+    context.user_data.update(course=course, course_term=term)
+    await q.edit_message_text(f"📚 <b>{escape(course_label(course))}</b>\n\n<b>{escape(course_term_label(course, term))}</b> — subject choose karo:", parse_mode=ParseMode.HTML, reply_markup=course_subject_kb(course, term))
+
+async def course_subject_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
+    _, course, term_s, idx_s = q.data.split("_"); term, idx = int(term_s), int(idx_s)
+    subjects = COURSE_CURRICULUM.get(course, {}).get(term, [])
+    if idx < 0 or idx >= len(subjects): await q.answer("Subject unavailable.", show_alert=True); return
+    subject = subjects[idx]
+    context.user_data.update(course=course, course_term=term, course_subject_index=idx, subject=subject)
+    topics = norcet_subject_index(subject)
+    await q.edit_message_text(f"📖 <b>{escape(subject)}</b>\n\n<b>{len(topics)} topic areas</b> available.\nHar topic ko open karke detailed notes dekho:", parse_mode=ParseMode.HTML, reply_markup=course_topic_kb(course, term, idx, subject))
+
+async def course_topic_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
+    _, course, term_s, subj_s, topic_s = q.data.split("_"); term, subj_idx, topic_idx = int(term_s), int(subj_s), int(topic_s)
+    subjects = COURSE_CURRICULUM.get(course, {}).get(term, [])
+    if subj_idx >= len(subjects): await q.answer("Subject unavailable.", show_alert=True); return
+    subject = subjects[subj_idx]; topics = norcet_subject_index(subject)
+    if topic_idx >= len(topics): await q.answer("Topic unavailable.", show_alert=True); return
+    topic = topics[topic_idx]
+    context.user_data.update(course=course, course_term=term, course_subject_index=subj_idx, subject=subject)
+    detailed = DETAILED_TOPIC_CONTENT.get(topic.strip().lower())
+    if detailed:
+        try: await q.message.reply_animation(detailed["gif"], caption="🎬🩺 Visual revision — ab notes focus se padho! 📚✨")
+        except Exception: pass
+    body = await detailed_topic_info(subject, topic)
+    await q.edit_message_text(f"📖 {course_term_label(course, term)}\n📚 {subject}\n🧠 {topic}\n\n{body[:3700]}", reply_markup=InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔙 Topic List", callback_data=f"csub_{course}_{term}_{subj_idx}")],
+        [InlineKeyboardButton("🎭 Technique + Timer", callback_data=f"cstart_{course}_{term}_{subj_idx}")],
+        [InlineKeyboardButton("📜 Full INC Syllabus", url=COURSE_SYLLABUS_URLS[course])],
+    ]))
+
+async def course_start_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
+    _, course, term_s, idx_s = q.data.split("_"); term, idx = int(term_s), int(idx_s)
+    subjects = COURSE_CURRICULUM.get(course, {}).get(term, [])
+    if idx >= len(subjects): await q.answer("Subject unavailable.", show_alert=True); return
+    subject = subjects[idx]
+    context.user_data.update(course=course, course_term=term, course_subject_index=idx, subject=subject)
+    await q.edit_message_text(f"🎭 <b>Technique choose karo</b>\n\n📚 {escape(subject)}\n\nTechnique choose karte hi default timer <b>start ho jayega</b>.\nComplete = +5 points • Incomplete = -7 points.", parse_mode=ParseMode.HTML, reply_markup=technique_selection_kb())
+
+async def course_back_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query; await q.answer()
+    course = q.data.replace("cback_", "")
+    await q.edit_message_text(f"📚 <b>{escape(course_label(course))}</b>\n\nSemester/Year choose karo:", parse_mode=ParseMode.HTML, reply_markup=course_terms_kb(course))
+
+async def course_subback_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query; await q.answer()
+    _, course, term_s = q.data.split("_"); term = int(term_s)
+    await q.edit_message_text(f"📚 <b>{escape(course_term_label(course, term))}</b>\n\nSubject choose karo:", parse_mode=ParseMode.HTML, reply_markup=course_subject_kb(course, term))
+
+async def detailed_topic_info(subject, topic):
+    if OPENAI_API_KEY:
+        answer = await ai_doubt_answer(None, f"Create detailed study notes for '{topic}' in '{subject}'. Include definition, key concepts, classification, causes/risk factors where relevant, pathophysiology/principles, signs/features where relevant, assessment/investigations, management, nursing management, procedure/technique points, patient education, complications/red flags, nurse responsibilities and NORCET high-yield revision. Keep it educational and source-conscious; do not invent drug doses or patient-specific treatment.")
+        if answer: return answer
+    return norcet_topic_info(subject, topic)
+
 # ================== DATABASE ==================
 def init_db():
     c = sqlite3.connect(DB_FILE); cur = c.cursor()
@@ -432,10 +588,9 @@ async def force_join_message(update, context):
 # ================== KEYBOARDS ==================
 def class_selection_kb():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("Class 9", callback_data="cls_9"), InlineKeyboardButton("Class 10", callback_data="cls_10")],
-        [InlineKeyboardButton("Class 11", callback_data="cls_11"), InlineKeyboardButton("Class 12", callback_data="cls_12")],
-        [InlineKeyboardButton("NEET", callback_data="cls_NEET"), InlineKeyboardButton("NORCET", callback_data="cls_NORCET")],
-        [InlineKeyboardButton("Other", callback_data="cls_Other")]
+        [InlineKeyboardButton("🎓 B.Sc Nursing", callback_data="cls_BSC"), InlineKeyboardButton("🏥 GNM Nursing", callback_data="cls_GNM")],
+        [InlineKeyboardButton("🩺 NORCET", callback_data="cls_NORCET")],
+        [InlineKeyboardButton("📚 Other / General Science", callback_data="cls_Other")]
     ])
 
 def subject_selection_kb():
@@ -535,11 +690,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     log.info("🚀 /start accepted: user=%s legacy_force_join_bypassed=1", uid)
 
+    joke = random.choice(SMART_JOKES)
     await update.message.reply_text(
         f"👋 Namaste <b>{escape(name)}</b>!\n\n"
         f"🚀 <b>{escape(get_setting('bot_name', 'Bhushan Science Bot'))}</b> <b>LIVE</b> 🟢\n\n"
-        "1️⃣ Mode → 2️⃣ Class → 3️⃣ Subject → 4️⃣ Technique\n\n"
-        "🎭 <b>Step 1/4 — Mode chuno:</b>",
+        f"{joke}\n\n"
+        "🧭 <b>Onboarding:</b> Mode → Course/Class → Semester/Year → Subject → Topic → Technique + Timer\n\n"
+        "🎭 <b>Step 1 — Mode chuno:</b>\n"
+        "Serious = professional • Fun = frank • Laparwah = savage/badtameez",
         parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton(f"{'✅ ' if user.get('mode','serious') == 'serious' else ''}{MODES['serious']['name']}", callback_data="setm_serious")],
@@ -554,24 +712,24 @@ async def verify_join_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else: await q.edit_message_text("❌ Saare channels join karo.")
 
 async def class_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); touch_user(q.from_user.id); cls = q.data.replace("cls_", "")
+    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
+    cls = q.data.replace("cls_", "")
     update_user(q.from_user.id, user_class=cls)
+    if cls in ("BSC", "GNM"):
+        context.user_data["course"] = cls
+        context.user_data["onboarding_step"] = "term"
+        await q.edit_message_text(
+            f"📚 <b>{escape(course_label(cls))}</b>\n\n"
+            "Semester/year choose karo. Har term ke andar INC curriculum ke subjects aur topic-wise notes milenge.",
+            parse_mode=ParseMode.HTML, reply_markup=course_terms_kb(cls))
+        return
     if cls == "NORCET":
         context.user_data['norcet_track'] = None
-        await q.edit_message_text(
-            "🇮🇳 <b>NORCET Syllabus</b>\n\n"
-            "INC ke nursing curriculum ke according preparation track chuno.\n"
-            "NORCET mein nursing portion candidate ki essential qualification ke nursing-course syllabus par based hota hai.",
-            parse_mode=ParseMode.HTML,
-            reply_markup=norcet_track_kb()
-        )
+        await q.edit_message_text("🇮🇳 <b>NORCET Syllabus</b>\n\nINC nursing curriculum ke according preparation track chuno.",
+            parse_mode=ParseMode.HTML, reply_markup=norcet_track_kb())
         return
     context.user_data['onboarding_step'] = 'subject'
-    await q.edit_message_text(
-        f"📚 <b>Class {escape(cls)}</b>\n\n📖 <b>Step 3/4 — Subject chuno:</b>",
-        parse_mode=ParseMode.HTML,
-        reply_markup=subject_selection_kb()
-    )
+    await q.edit_message_text(f"📚 <b>{escape(cls)}</b>\n\n📖 Subject chuno:", parse_mode=ParseMode.HTML, reply_markup=subject_selection_kb())
 
 async def norcet_track_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
@@ -734,29 +892,21 @@ async def padhai_shuru(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("📚 <b>Subject chuno</b>", parse_mode=ParseMode.HTML, reply_markup=subject_selection_kb())
 
 async def technique_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); touch_user(q.from_user.id); tech = q.data.replace("tech_", "")
-    context.user_data['technique'] = tech; t = TECHNIQUES[tech]; total = t['work'] * t['cycles']
+    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
+    tech = q.data.replace("tech_", "")
+    if tech not in TECHNIQUES:
+        await q.answer("Technique unavailable.", show_alert=True); return
+    context.user_data['technique'] = tech
     context.user_data['onboarding'] = False
     context.user_data['onboarding_step'] = None
     subject = context.user_data.get('subject')
-    if subject:
-        await q.edit_message_text(
-            f"🎭 <b>{t['name']}</b>\n\n{t['desc']}\n\n"
-            f"⏱ {t['work']}min × {t['cycles']} = <b>{total} min</b>\n\n"
-            f"📚 Subject: <b>{escape(subject)}</b>\n\n⏱ Duration choose karo:",
-            parse_mode=ParseMode.HTML,
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton(f"Default ({total}m)", callback_data=f"dur_{total}"), InlineKeyboardButton("30 min", callback_data="dur_30")],
-                [InlineKeyboardButton("1 ghanta", callback_data="dur_60"), InlineKeyboardButton("2 ghante", callback_data="dur_120")],
-                [InlineKeyboardButton("3 ghante", callback_data="dur_180"), InlineKeyboardButton("Custom", callback_data="dur_custom")]
-            ])
-        )
-        return
-    await q.edit_message_text(
-        f"{t['name']}\n\n{t['desc']}\n\n⏱ {total} min\n\nAb subject chuno:",
-        parse_mode=ParseMode.HTML,
-        reply_markup=subject_selection_kb()
-    )
+    if not subject:
+        await q.edit_message_text("📚 Pehle subject choose karo.", reply_markup=subject_selection_kb()); return
+    t = TECHNIQUES[tech]
+    context.user_data['duration'] = t['work']
+    await q.edit_message_text(f"🎭 <b>{t['name']}</b>\n\n{t['desc']}\n\n📚 Subject: <b>{escape(subject)}</b>\n⏱ Timer: <b>{t['work']} min</b>\n\n🚀 Timer STARTED!", parse_mode=ParseMode.HTML)
+    await send_style_media(context, q.from_user.id, get_user_mode(q.from_user.id))
+    await start_study_session(context, q.from_user.id)
 
 async def subject_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query; await q.answer(); sub = q.data.replace("sub_", "")
@@ -864,15 +1014,18 @@ async def session_reminder(context: ContextTypes.DEFAULT_TYPE):
 async def nag_check(context: ContextTypes.DEFAULT_TYPE):
     sid = context.job.data['sid']; uid = context.job.chat_id; u = get_user(uid)
     if not u or u.get('current_session') != sid: return
-    mode = get_user_mode(uid); nags = MODES[mode]['nag']; n = int(get_setting('nag_message_count', '5'))
-    for i in range(n):
-        try: await context.bot.send_message(uid, f"{nags[i % len(nags)]}\n\n({i+1}/{n})")
-        except: pass
-        await asyncio.sleep(60)
-    pts = int(get_setting('punishment_points', '20')); add_points(uid, -pts, f"Session #{sid} adhura")
+    mode = get_user_mode(uid)
+    for i, line in enumerate(ROAST_LINES, 1):
+        if get_user(uid).get('current_session') != sid: return
+        try: await context.bot.send_message(uid, f"{line}\n\n<code>Roast {i}/25</code>", parse_mode=ParseMode.HTML)
+        except Exception: pass
+        await asyncio.sleep(0.6 if i % 5 else 1)
+    if get_user(uid).get('current_session') != sid: return
+    add_points(uid, -7, f"Session #{sid} incomplete")
     c = db(); c.execute("UPDATE sessions SET status='failed', end_time=? WHERE id=?", (datetime.now(), sid)); c.commit(); c.close()
     update_user(uid, current_session=0)
-    await context.bot.send_message(uid, f"{MODES[mode]['punish']}\n\nPoints: -{pts}", parse_mode=ParseMode.HTML)
+    await context.bot.send_message(uid, f"{MODES[mode]['punish']}\n\n💎 <b>-7 points</b>", parse_mode=ParseMode.HTML)
+    await send_style_media(context, uid, mode)
 
 # ================== QUESTIONS ==================
 async def ask_questions(context, uid, sid):
@@ -906,7 +1059,7 @@ async def answer_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data[f'qi_{sid}'] = i + 1; await asyncio.sleep(1.5); await send_next_question(context, uid, sid)
 
 async def finish_session(context, uid, sid, asked, correct):
-    pts = int(get_setting('reward_points', '10')); total_pts = pts + correct * 5
+    total_pts = 5
     c = db(); c.execute("UPDATE sessions SET status='completed', end_time=?, q_asked=?, q_correct=? WHERE id=?", (datetime.now(), asked, correct, sid))
     row = c.execute("SELECT planned_minutes FROM sessions WHERE id=?", (sid,)).fetchone(); planned = row['planned_minutes'] if row else 0; c.close()
     u = get_user(uid); total_min = (u['total_minutes'] or 0) + planned
@@ -916,7 +1069,8 @@ async def finish_session(context, uid, sid, asked, correct):
     else: streak = 1
     update_user(uid, total_minutes=total_min, streak=streak, last_study=today, current_session=0, sessions_done=(u['sessions_done'] or 0) + 1)
     add_points(uid, total_pts, f"Session #{sid} complete")
-    await context.bot.send_message(uid, f"{MODES[get_user_mode(uid)]['reward']}\n\n✅ Sahi: {correct}/{asked}\n💎 +{total_pts} points\n🔥 Streak: {streak} din\n⏱ Total: {total_min} min", parse_mode=ParseMode.HTML, reply_markup=main_menu_kb())
+    await context.bot.send_message(uid, f"{MODES[get_user_mode(uid)]['reward']}\n\n✅ Sahi: {correct}/{asked}\n💎 <b>+5 reward points</b>\n🔥 Streak: {streak} din\n⏱ Total: {total_min} min", parse_mode=ParseMode.HTML, reply_markup=main_menu_kb())
+    await send_style_media(context, uid, get_user_mode(uid))
 
 # ================== AI DOUBT SCANNER ==================
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "").strip()
@@ -1596,7 +1750,9 @@ def main():
         # Callback handlers
         for pat, fn in [
             ("^a_app_missing$", app_missing_cb), ("^cls_", class_cb),
-            ("^ntrack_", norcet_track_cb), ("^subn_", norcet_subject_cb),
+            ("^ntrack_", norcet_track_cb), ("^cterm_", course_term_cb), ("^csubback_", course_subback_cb),
+            ("^csub_", course_subject_cb), ("^ctopic_", course_topic_cb), ("^cstart_", course_start_cb), ("^cback_", course_back_cb),
+            ("^subn_", norcet_subject_cb),
             ("^ninfo_", norcet_info_cb), ("^ntech_", norcet_technique_cb),
             ("^ntopic_", norcet_topic_cb), ("^nbacktopic_", norcet_backtopic_cb),
             ("^nstart_", norcet_start_cb), ("^nback_", norcet_back_cb),
