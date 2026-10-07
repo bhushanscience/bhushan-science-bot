@@ -1145,11 +1145,14 @@ async def break_msg_job(context: ContextTypes.DEFAULT_TYPE):
 async def session_reminder(context: ContextTypes.DEFAULT_TYPE):
     sid = context.job.data['sid']; uid = context.job.chat_id; u = get_user(uid)
     if not u or u.get('current_session') != sid: return
+    c=db(); c.execute("UPDATE sessions SET status='awaiting_quiz' WHERE id=? AND status='running'",(sid,)); c.commit(); c.close()
     await ask_questions(context, uid, sid)
 
 async def nag_check(context: ContextTypes.DEFAULT_TYPE):
     sid = context.job.data['sid']; uid = context.job.chat_id; u = get_user(uid)
     if not u or u.get('current_session') != sid: return
+    c=db(); sr=c.execute("SELECT status FROM sessions WHERE id=?",(sid,)).fetchone(); c.close()
+    if sr and sr['status'] == 'awaiting_quiz': return
     mode = get_user_mode(uid)
     if mode == "laparwah":
         lines = ROAST_LINES
