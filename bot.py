@@ -26,8 +26,8 @@ DB_FILE = "bhushan_science.db"
 TIMEZONE = "Asia/Kolkata"
 # Public HTTPS URL of the Telegram Mini App. Set this in Render after hosting webapp/.
 WEBAPP_URL = os.environ.get("WEBAPP_URL", "").strip()
-STICKER_URL = os.environ.get("STICKER_URL", "https://raw.githubusercontent.com/bhushanscience/bhushan-science-bot/main/assets/focus_sticker.webp").strip()
-ANIMATION_URL = os.environ.get("ANIMATION_URL", "https://raw.githubusercontent.com/bhushanscience/bhushan-science-bot/main/assets/study.gif").strip()
+STICKER_URL = os.environ.get("STICKER_URL", "https://media.githubusercontent.com/media/ilyhalight/telegram-emoji-effects/master/webp/U+1F389/0.webp").strip()
+ANIMATION_URL = os.environ.get("ANIMATION_URL", "https://i.imgur.com/LyHic3i.gif").strip()
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -1015,9 +1015,17 @@ async def nag_check(context: ContextTypes.DEFAULT_TYPE):
     sid = context.job.data['sid']; uid = context.job.chat_id; u = get_user(uid)
     if not u or u.get('current_session') != sid: return
     mode = get_user_mode(uid)
-    for i, line in enumerate(ROAST_LINES, 1):
+    if mode == "laparwah":
+        lines = ROAST_LINES
+    elif mode == "fun":
+        lines = MODES["fun"]["nag"]
+    else:
+        lines = MODES["serious"]["nag"]
+    for i in range(1, 26):
         if get_user(uid).get('current_session') != sid: return
-        try: await context.bot.send_message(uid, f"{line}\n\n<code>Roast {i}/25</code>", parse_mode=ParseMode.HTML)
+        line = lines[(i - 1) % len(lines)]
+        try:
+            await context.bot.send_message(uid, f"{line}\n\n<code>Reminder {i}/25</code>", parse_mode=ParseMode.HTML)
         except Exception: pass
         await asyncio.sleep(0.6 if i % 5 else 1)
     if get_user(uid).get('current_session') != sid: return
