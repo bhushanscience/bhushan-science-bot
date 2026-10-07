@@ -417,18 +417,17 @@ def get_user_mode(uid):
             update_user(uid, mode=mode)
     return mode
 
-# ================== FORCE JOIN ==================
+# ================== ACCESS / FORCE-JOIN ==================
+# Force-join is permanently disabled in the production bot.
+# Keep this guard for compatibility with any old internal call sites, but it
+# MUST NEVER send channel-join prompts or expose legacy channel data.
 async def check_joined(context, user_id):
-    # Force-join is intentionally disabled. Legacy channel rows/settings must
-    # never block or redirect normal users.
     return True
 
 async def force_join_message(update, context):
-    chs = all_channels()
-    if not chs: await update.message.reply_text("Koi channel set nahi hai."); return
-    btns = [[InlineKeyboardButton(f"📢 {ch['channel_name']}", url=ch['channel_link'])] for ch in chs]
-    btns.append([InlineKeyboardButton("✅ Verify Kiya", callback_data="verify_join")])
-    await update.message.reply_text("🔒 <b>Pehle channel join karo:</b>", reply_markup=InlineKeyboardMarkup(btns), parse_mode=ParseMode.HTML)
+    log.warning("⚠️ Legacy force_join_message() called; redirecting to normal /start flow")
+    if getattr(update, "message", None):
+        await start(update, context)
 
 # ================== KEYBOARDS ==================
 def class_selection_kb():
@@ -1141,12 +1140,10 @@ async def channels_panel(q, context):
         for ch in chs: txt += f"• {ch['channel_name']} — <code>{ch['channel_id']}</code>\n"
     else: txt += "Koi nahi.\n"
     txt += "\n/addchannel <id> | name | link\n/delchannel <id>"
-    btns = []
-    if get_setting('force_join_configured', '0') == '1' and get_setting('force_join_enabled', '0') == '1':
-        btns.append([InlineKeyboardButton("🔓 Force Join OFF", callback_data="a_fjoff")])
-    else:
-        btns.append([InlineKeyboardButton("🔒 Force Join ON", callback_data="a_fjon")])
-    btns.append([InlineKeyboardButton("🔙 Back", callback_data="a_menu")])
+    btns = [
+        [InlineKeyboardButton("🚫 Force Join Disabled", callback_data="a_menu")],
+        [InlineKeyboardButton("🔙 Back", callback_data="a_menu")]
+    ]
     await q.edit_message_text(txt, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(btns))
 
 async def fj_toggle(update, context):
