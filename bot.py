@@ -468,6 +468,7 @@ async def course_topic_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception: pass
     body = await detailed_topic_info(subject, topic)
     await q.edit_message_text(f"📖 {course_term_label(course, term)}\n📚 {subject}\n🧠 {topic}\n\n{body[:3700]}", reply_markup=InlineKeyboardMarkup([
+        [InlineKeyboardButton("📝 Optional Question Practice", callback_data=f"cpractice_{course}_{term}_{subj_idx}_{topic_idx}")],
         [InlineKeyboardButton("🔙 Topic List", callback_data=f"csub_{course}_{term}_{subj_idx}")],
         [InlineKeyboardButton("🎭 Technique + Timer", callback_data=f"cstart_{course}_{term}_{subj_idx}")],
         [InlineKeyboardButton("📜 Full INC Syllabus", url=COURSE_SYLLABUS_URLS[course])],
@@ -1758,7 +1759,7 @@ def main():
         # Callback handlers
         for pat, fn in [
             ("^a_app_missing$", app_missing_cb), ("^cls_", class_cb),
-            ("^ntrack_", norcet_track_cb), ("^cterm_", course_term_cb), ("^csubback_", course_subback_cb),
+            ("^ntrack_", norcet_track_cb), ("^cterm_", course_term_cb), ("^cpractice_", course_practice_cb), ("^tqa_", topic_answer_cb), ("^csubback_", course_subback_cb),
             ("^csub_", course_subject_cb), ("^ctopic_", course_topic_cb), ("^cstart_", course_start_cb), ("^cback_", course_back_cb),
             ("^subn_", norcet_subject_cb),
             ("^ninfo_", norcet_info_cb), ("^ntech_", norcet_technique_cb),
