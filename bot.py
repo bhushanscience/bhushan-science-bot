@@ -687,6 +687,11 @@ def technique_selection_kb():
     if row: btns.append(row)
     return InlineKeyboardMarkup(btns)
 
+def session_control_kb(sid, paused=False):
+    if paused:
+        return InlineKeyboardMarkup([[InlineKeyboardButton("▶️ Resume Timer", callback_data=f"sess_resume_{sid}"), InlineKeyboardButton("⏹ End (-7)", callback_data=f"sess_stop_{sid}")]])
+    return InlineKeyboardMarkup([[InlineKeyboardButton("⏸ Pause", callback_data=f"sess_pause_{sid}"), InlineKeyboardButton("⏹ End Early (-7)", callback_data=f"sess_stop_{sid}")]])
+
 def main_menu_kb():
     app_button = KeyboardButton("📱 Study App", web_app=WebAppInfo(url=WEBAPP_URL)) if WEBAPP_URL else KeyboardButton("📱 Study App")
     return ReplyKeyboardMarkup([
@@ -986,6 +991,46 @@ async def technique_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await send_style_media(context, q.from_user.id, get_user_mode(q.from_user.id))
     await start_study_session(context, q.from_user.id)
 
+async def session_pause_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q=update.callback_query; await q.answer(); uid=q.from_user.id
+    try: sid=int(q.data.replace("sess_pause_",""))
+    except: return
+    u=get_user(uid)
+    if not u or u.get('current_session')!=sid: await q.answer("Session active nahi hai.",show_alert=True); return
+    c=db(); row=c.execute("SELECT * FROM sessions WHERE id=? AND user_id=? AND status='running'",(sid,uid)).fetchone()
+    if not row: c.close(); await q.answer("Already paused/stopped.",show_alert=True); return
+    try: started=datetime.fromisoformat(str(row['start_time']))
+    except: started=datetime.now()
+    elapsed=max(0,int((datetime.now()-started).total_seconds()))
+    remaining=max(1,int(row['remaining_seconds'] or row['planned_minutes']*60)-elapsed)
+    c.execute("UPDATE sessions SET status='paused',remaining_seconds=?,paused_at=? WHERE id=?",(remaining,datetime.now(),sid)); c.commit(); c.close()
+    await cancel_session_jobs(context.application,sid)
+    await q.edit_message_text(f"⏸ <b>Timer PAUSED</b>\n\nSession #{sid}\n⏳ Remaining: <b>{remaining//60}m {remaining%60}s</b>",parse_mode=ParseMode.HTML,reply_markup=session_control_kb(sid,True))
+
+async def session_resume_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q=update.callback_query; await q.answer(); uid=q.from_user.id
+    try: sid=int(q.data.replace("sess_resume_",""))
+    except: return
+    c=db(); row=c.execute("SELECT * FROM sessions WHERE id=? AND user_id=? AND status='paused'",(sid,uid)).fetchone()
+    if not row: c.close(); await q.answer("Paused session nahi mila.",show_alert=True); return
+    remaining=max(1,int(row['remaining_seconds'] or 1))
+    c.execute("UPDATE sessions SET status='running',start_time=?,paused_at=NULL WHERE id=?",(datetime.now(),sid)); c.commit(); c.close()
+    update_user(uid,current_session=sid)
+    await schedule_session_jobs(context,uid,sid,remaining)
+    await q.edit_message_text(f"▶️ <b>Timer RESUMED</b>\n\nSession #{sid}\n⏳ Remaining: <b>{remaining//60}m {remaining%60}s</b>",parse_mode=ParseMode.HTML,reply_markup=session_control_kb(sid))
+
+async def session_stop_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q=update.callback_query; await q.answer(); uid=q.from_user.id
+    try: sid=int(q.data.replace("sess_stop_",""))
+    except: return
+    u=get_user(uid)
+    if not u or u.get('current_session')!=sid: await q.answer("Session active nahi hai.",show_alert=True); return
+    await cancel_session_jobs(context.application,sid)
+    now=datetime.now()
+    c=db(); c.execute("UPDATE sessions SET status='failed',end_time=?,actual_minutes=CAST((julianday(?) - julianday(start_time))*1440 AS INTEGER) WHERE id=?",(now,now,sid)); c.commit(); c.close()
+    update_user(uid,current_session=0); add_points(uid,-7,f"Session #{sid} ended early")
+    await q.edit_message_text("⏹ <b>Session ended early.</b>\n\n💎 <b>-7 points</b>\nNext session me comeback karo.",parse_mode=ParseMode.HTML,reply_markup=main_menu_kb())
+
 async def subject_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query; await q.answer(); sub = q.data.replace("sub_", "")
     context.user_data['subject'] = sub
@@ -1032,30 +1077,43 @@ async def custom_minutes_msg(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await update.message.reply_text(f"⏱ <b>{dur} min</b>\n\n📚 Session start ho raha hai — photo ki zarurat nahi hai.", parse_mode=ParseMode.HTML)
     await start_study_session(context, update.effective_user.id)
 
-async def start_study_session(context: ContextTypes.DEFAULT_TYPE, uid):
-    sub = context.user_data.get('subject', 'General')
-    dur = int(context.user_data.get('duration', 30))
-    tech = context.user_data.get('technique', 'pomodoro')
-    mode = get_user_mode(uid)
-    c = db()
-    cur = c.execute("INSERT INTO sessions(user_id,subject,technique,mode,planned_minutes,start_time,photo_file_id,status) VALUES(?,?,?,?,?,?,?,?)",
-                    (uid, sub, tech, mode, dur, datetime.now(), None, 'running'))
-    sid = cur.lastrowid; c.commit(); c.close()
-    update_user(uid, current_session=sid); touch_user(uid)
-    u = get_user(uid); used = [x for x in (u.get('techniques_used') or '').split(',') if x]
-    if tech not in used: used.append(tech)
-    update_user(uid, techniques_used=','.join(used)); check_badges(uid)
-    context.user_data['session_id'] = sid
-    context.user_data['awaiting'] = None
-    t = TECHNIQUES[tech]
-    for cyc in range(t['cycles']):
-        delay_min = t['work'] * (cyc + 1) + t['break'] * cyc
-        if delay_min < dur:
-            context.job_queue.run_once(break_msg_job, delay_min * 60, chat_id=uid, data={'sid': sid, 'cycle': cyc + 1, 'mode': mode})
-    context.job_queue.run_once(session_reminder, dur * 60, chat_id=uid, data={'sid': sid})
-    context.job_queue.run_once(nag_check, (dur + 5) * 60, chat_id=uid, data={'sid': sid})
-    await context.bot.send_message(uid, f"✅ <b>Session #{sid}</b>\n\n{t['name']} | {escape(sub)} | {dur} min\n\n{MODES[mode]['start']}\n\n📌 Index + important points dekhne ke baad focused study karo.", parse_mode=ParseMode.HTML, reply_markup=main_menu_kb())
+async def cancel_session_jobs(app, sid):
+    jq=app.job_queue
+    if not jq: return
+    for name in (f"session_break_{sid}",f"session_reminder_{sid}",f"session_nag_{sid}"):
+        for job in jq.get_jobs_by_name(name): job.schedule_removal()
 
+async def schedule_session_jobs(context, uid, sid, remaining_seconds):
+    jq=context.job_queue
+    if not jq: return
+    for name in (f"session_break_{sid}",f"session_reminder_{sid}",f"session_nag_{sid}"):
+        for job in jq.get_jobs_by_name(name): job.schedule_removal()
+    remaining_seconds=max(1,int(remaining_seconds))
+    jq.run_once(session_reminder,remaining_seconds,chat_id=uid,data={'sid':sid},name=f"session_reminder_{sid}")
+    jq.run_once(nag_check,remaining_seconds+300,chat_id=uid,data={'sid':sid},name=f"session_nag_{sid}")
+
+async def start_study_session(context, uid):
+    sub=context.user_data.get('subject','General'); dur=int(context.user_data.get('duration',30))
+    tech=context.user_data.get('technique','pomodoro'); mode=get_user_mode(uid)
+    c=db(); active=c.execute("SELECT id FROM sessions WHERE user_id=? AND status IN ('running','paused')",(uid,)).fetchone()
+    if active:
+        c.close(); await context.bot.send_message(uid,"⚠️ Tumhara ek study session already active hai. Pehle usko complete/end karo."); return
+    cur=c.execute("INSERT INTO sessions(user_id,subject,technique,mode,planned_minutes,start_time,photo_file_id,status,remaining_seconds) VALUES(?,?,?,?,?,?,?,?,?)",(uid,sub,tech,mode,dur,datetime.now(),None,'running',dur*60))
+    sid=cur.lastrowid; c.commit(); c.close()
+    update_user(uid,current_session=sid); touch_user(uid)
+    u=get_user(uid); used=[x for x in (u.get('techniques_used') or '').split(',') if x]
+    if tech not in used: used.append(tech)
+    update_user(uid,techniques_used=','.join(used)); check_badges(uid)
+    context.user_data['session_id']=sid; context.user_data['awaiting']=None
+    t=TECHNIQUES[tech]
+    if context.job_queue:
+        for cyc in range(t['cycles']):
+            delay=t['work']*(cyc+1)+t['break']*cyc
+            if delay < dur:
+                context.job_queue.run_once(break_msg_job,delay*60,chat_id=uid,data={'sid':sid,'cycle':cyc+1,'mode':mode},name=f"session_break_{sid}")
+        await schedule_session_jobs(context,uid,sid,dur*60)
+    await context.bot.send_message(uid,f"✅ <b>Session #{sid}</b>\n\n{t['name']} | {escape(sub)} | {dur} min\n\n{MODES[mode]['start']}\n\n📌 Timer controls neeche milenge.",parse_mode=ParseMode.HTML,reply_markup=session_control_kb(sid))
+    await context.bot.send_message(uid,"📚 Focus mode ON — study session start ho gaya.",reply_markup=main_menu_kb())
 
 async def study_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if context.user_data.get('awaiting') != 'study_photo': return
@@ -1683,6 +1741,21 @@ async def daily_meme_job(context):
         try: await context.bot.send_photo(u, m['file_id'], caption=f"😂 {m['caption'] or ''}"); await asyncio.sleep(0.05)
         except: pass
 
+async def auto_meme_job(context):
+    if str(get_setting('auto_meme_enabled','1')).lower() not in ('1','true','yes','on'): return
+    chat_id=get_setting('meme_chat_id',MEME_CHAT_ID).strip()
+    if not chat_id: return
+    c=db(); rows=c.execute("SELECT id,file_id,caption FROM memes ORDER BY id").fetchall(); c.close()
+    last=int(get_setting('auto_meme_last_id','0') or 0)
+    choices=[dict(r) for r in rows if r['id']!=last] or [dict(r) for r in rows]
+    try:
+        if choices:
+            m=random.choice(choices)
+            await context.bot.send_photo(chat_id,m['file_id'],caption=f"😂 {m.get('caption') or 'Bhushan Science Meme'}")
+            set_setting('auto_meme_last_id',m['id'])
+        else: await context.bot.send_message(chat_id,random.choice(SMART_JOKES+ROAST_LINES))
+    except Exception as e: log.warning("Auto meme publish failed: %s",e)
+
 async def daily_quiz_job(context): await broadcast_daily_quiz(context)
 
 async def exam_countdown_daily(context):
@@ -1706,7 +1779,7 @@ def reschedule_jobs(app):
         log.error("❌ JobQueue unavailable. Install python-telegram-bot[job-queue].")
         return
 
-    for name in ["daily_quote", "daily_meme", "daily_quiz", "exam_countdown", "idle_coach", "online_source_update"]:
+    for name in ["daily_quote", "daily_meme", "daily_quiz", "exam_countdown", "idle_coach", "online_source_update", "auto_meme_publish"]:
         for j in job_queue.get_jobs_by_name(name):
             j.schedule_removal()
 
@@ -1724,6 +1797,9 @@ def reschedule_jobs(app):
     )
     job_queue.run_repeating(idle_coach_job, interval=120, first=120, name="idle_coach")
     job_queue.run_repeating(online_source_update_job, interval=120, first=10, name="online_source_update")
+    try: meme_interval=max(300,int(get_setting("auto_meme_interval","1800") or 1800))
+    except: meme_interval=1800
+    job_queue.run_repeating(auto_meme_job,interval=meme_interval,first=60,name="auto_meme_publish")
 
 # ================== CHANNEL POST ==================
 async def channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1854,7 +1930,7 @@ def main():
             ("^ninfo_", norcet_info_cb), ("^ntech_", norcet_technique_cb),
             ("^ntopic_", norcet_topic_cb), ("^nbacktopic_", norcet_backtopic_cb),
             ("^nstart_", norcet_start_cb), ("^nback_", norcet_back_cb),
-            ("^tech_", technique_cb), ("^sub_", subject_cb), ("^dur_", duration_cb),
+            ("^tech_", technique_cb), ("^sess_pause_", session_pause_cb), ("^sess_resume_", session_resume_cb), ("^sess_stop_", session_stop_cb), ("^sub_", subject_cb), ("^dur_", duration_cb),
             ("^ans_", answer_cb), ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb),
             ("^a_fj", fj_toggle), ("^a_", admin_cb)
         ]:
