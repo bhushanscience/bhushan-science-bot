@@ -1623,6 +1623,11 @@ def main():
                 close_loop=False,
             )
         else:
+            # Render Web Services expect an HTTP listener. Keep a tiny health
+            # server alive in a daemon thread while Telegram uses polling.
+            # This avoids webhook configuration entirely while still making
+            # the service health-checkable at / and /health.
+            threading.Thread(target=run_web, name="health-server", daemon=True).start()
             log.info("🔄 Starting Telegram polling mode (Render-safe default)")
             app.run_polling(
                 allowed_updates=Update.ALL_TYPES,
