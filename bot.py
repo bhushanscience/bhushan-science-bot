@@ -1,5 +1,5 @@
 # ============================================================
-# BHUSHAN SCIENCE BOT - v3.2 (Render Perfect + Logged)
+# BHUSHAN SCIENCE BOT - v3.3 (New-Bot Identity Safe)
 # ============================================================
 
 import os, sqlite3, logging, asyncio, random, threading, traceback, time, re, base64, json
@@ -28,6 +28,9 @@ TIMEZONE = "Asia/Kolkata"
 WEBAPP_URL = os.environ.get("WEBAPP_URL", "").strip()
 MEME_CHAT_ID = os.environ.get("MEME_CHAT_ID", "").strip()
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "").strip()
+# Optional safety check: set EXPECTED_BOT_USERNAME to the new BotFather username
+# (without @). Startup fails if the configured token belongs to another bot.
+EXPECTED_BOT_USERNAME = os.environ.get("EXPECTED_BOT_USERNAME", "").strip().lstrip("@").lower()
 STICKER_URL = os.environ.get("STICKER_URL", "https://media.githubusercontent.com/media/ilyhalight/telegram-emoji-effects/master/webp/U+1F389/0.webp").strip()
 ANIMATION_URL = os.environ.get("ANIMATION_URL", "https://i.imgur.com/LyHic3i.gif").strip()
 
@@ -1921,7 +1924,13 @@ async def post_init(app):
     try:
         await app.bot.delete_webhook(drop_pending_updates=False)
         me = await app.bot.get_me()
+        actual_username = (me.username or "").lower()
         log.info("🔗 Telegram connection ready: @%s (id=%s)", me.username, me.id)
+        if EXPECTED_BOT_USERNAME and actual_username != EXPECTED_BOT_USERNAME:
+            raise RuntimeError(
+                f"BOT_TOKEN belongs to @{me.username}, but EXPECTED_BOT_USERNAME is @{EXPECTED_BOT_USERNAME}. "
+                "Fix the Render environment variable BOT_TOKEN before continuing."
+            )
     except InvalidToken:
         log.error("❌ TELEGRAM TOKEN INVALID/REVOKED — check BOT_TOKEN in hosting environment variables.")
         raise
