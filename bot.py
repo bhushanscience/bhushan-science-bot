@@ -1916,7 +1916,17 @@ async def bot_error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
 
 # ================== MAIN ==================
 async def post_init(app):
-    reschedule_jobs(app); log.info("✅ Jobs scheduled")
+    # Clear any stale Telegram webhook before polling. A previous webhook
+    # configuration can otherwise prevent getUpdates from receiving messages.
+    try:
+        await app.bot.delete_webhook(drop_pending_updates=False)
+        me = await app.bot.get_me()
+        log.info("🔗 Telegram connection ready: @%s (id=%s)", me.username, me.id)
+    except Exception as e:
+        log.exception("❌ Telegram startup check failed: %s", e)
+        raise
+    reschedule_jobs(app)
+    log.info("✅ Jobs scheduled")
 
 def main():
     """Start the bot reliably on Render using long-polling.
@@ -1978,11 +1988,23 @@ def main():
     port = int(os.environ.get("PORT", "10000"))
     threading.Thread(target=run_web, daemon=True, name="health-server").start()
 
-    app.run_polling(
-        drop_pending_updates=False,
-        allowed_updates=Update.ALL_TYPES,
-        close_loop=False,
-    )
+    # Keep the service alive if Telegram temporarily reports a conflict.
+    # A stale webhook is already cleared in post_init; transient Telegram
+    # conflicts should not permanently kill the Render process.
+    while True:
+        try:
+            app.run_polling(
+                drop_pending_updates=False,
+                allowed_updates=Update.ALL_TYPES,
+                close_loop=False,
+            )
+            break
+        except Conflict as e:
+            log.error("⚠️ Telegram polling conflict: %s; retrying in 10s", e)
+            time.sleep(10)
+        except Exception as e:
+            log.exception("❌ Polling stopped unexpectedly: %s; retrying in 10s", e)
+            time.sleep(10)
 
 if __name__ == "__main__":
     main()
