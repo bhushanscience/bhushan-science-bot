@@ -15,12 +15,12 @@ from telegram.ext import (
     ContextTypes, filters
 )
 from telegram.constants import ParseMode
-from telegram.error import Conflict
+from telegram.error import Conflict, InvalidToken
 from flask import Flask
 import pytz
 
 # ================== CONFIG ==================
-BOT_TOKEN = os.environ.get("BOT_TOKEN", "").strip()
+BOT_TOKEN = (os.environ.get("BOT_TOKEN") or os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("TELEGRAM_TOKEN") or "").strip().strip('"').strip("'")
 OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
 DB_FILE = "bhushan_science.db"
 TIMEZONE = "Asia/Kolkata"
@@ -1922,6 +1922,9 @@ async def post_init(app):
         await app.bot.delete_webhook(drop_pending_updates=False)
         me = await app.bot.get_me()
         log.info("🔗 Telegram connection ready: @%s (id=%s)", me.username, me.id)
+    except InvalidToken:
+        log.error("❌ TELEGRAM TOKEN INVALID/REVOKED — check BOT_TOKEN in hosting environment variables.")
+        raise
     except Exception as e:
         log.exception("❌ Telegram startup check failed: %s", e)
         raise
