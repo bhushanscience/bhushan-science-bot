@@ -12,7 +12,7 @@ from telegram import (
 )
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, CallbackQueryHandler,
-    ContextTypes, filters
+    ContextTypes, filters, ApplicationHandlerStop, TypeHandler
 )
 from telegram.constants import ParseMode
 from telegram.error import Conflict, InvalidToken
@@ -20,19 +20,10 @@ from flask import Flask
 import pytz
 
 # ================== CONFIG ==================
-BOT_TOKEN = (os.environ.get("BOT_TOKEN") or os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("TELEGRAM_TOKEN") or "").strip().strip('"').strip("'")
-OWNER_ID = int(os.environ.get("OWNER_ID", "0"))
-DB_FILE = "bhushan_science.db"
-TIMEZONE = "Asia/Kolkata"
-# Public HTTPS URL of the Telegram Mini App. Set this in Render after hosting webapp/.
-WEBAPP_URL = os.environ.get("WEBAPP_URL", "").strip()
-MEME_CHAT_ID = os.environ.get("MEME_CHAT_ID", "").strip()
-WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "").strip()
-# Optional safety check: set EXPECTED_BOT_USERNAME to the new BotFather username
-# (without @). Startup fails if the configured token belongs to another bot.
-EXPECTED_BOT_USERNAME = os.environ.get("EXPECTED_BOT_USERNAME", "").strip().lstrip("@").lower()
-STICKER_URL = os.environ.get("STICKER_URL", "https://media.githubusercontent.com/media/ilyhalight/telegram-emoji-effects/master/webp/U+1F389/0.webp").strip()
-ANIMATION_URL = os.environ.get("ANIMATION_URL", "https://i.imgur.com/LyHic3i.gif").strip()
+from config import (
+    BOT_TOKEN, OWNER_ID, DB_FILE, TIMEZONE, WEBAPP_URL, MEME_CHAT_ID,
+    WEBHOOK_SECRET, EXPECTED_BOT_USERNAME, STICKER_URL, ANIMATION_URL,
+)
 
 logging.basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=logging.INFO)
 log = logging.getLogger(__name__)
@@ -597,6 +588,23 @@ def init_db():
     cur.execute('''CREATE TABLE IF NOT EXISTS daily_quiz(id INTEGER PRIMARY KEY AUTOINCREMENT, quiz_date DATE UNIQUE, question TEXT, option_a TEXT, option_b TEXT, option_c TEXT, option_d TEXT, correct_option TEXT, explanation TEXT)''')
     cur.execute('''CREATE TABLE IF NOT EXISTS quiz_answers(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, quiz_date DATE, chosen TEXT, correct INTEGER, UNIQUE(user_id, quiz_date))''')
     cur.execute('''CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT)''')
+    # Additive schema: never delete or rebuild existing user data.
+    cur.execute('''CREATE TABLE IF NOT EXISTS force_channels(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, chat_id TEXT NOT NULL UNIQUE,
+        title TEXT NOT NULL, invite_link TEXT, is_active INTEGER NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS support_tickets(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL,
+        username TEXT, query_text TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'open',
+        reply_text TEXT, replied_by INTEGER, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS admin_audit(
+        id INTEGER PRIMARY KEY AUTOINCREMENT, admin_id INTEGER NOT NULL,
+        action TEXT NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS event_tickets(
+        code TEXT PRIMARY KEY, attendee_name TEXT NOT NULL, details TEXT NOT NULL DEFAULT '',
+        is_checked_in INTEGER NOT NULL DEFAULT 0, checked_in_by INTEGER,
+        checked_in_at TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     defaults = {'force_join_enabled': '0', 'force_join_configured': '0', 'join_fun_name': '', 'join_fun_link': '', 'reward_points': '10', 'punishment_points': '20', 'nag_message_count': '5', 'daily_points_target': '50', 'bot_name': 'Bhushan Science', 'welcome_msg': 'Padhai karo!', 'quote_time': '07:00', 'meme_time': '21:00', 'quiz_time': '20:00', 'break_reminder': '1', 'auto_meme_enabled': '1', 'meme_chat_id': MEME_CHAT_ID, 'auto_meme_interval': '1800'}
     for k, v in defaults.items(): cur.execute("INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)", (k, v))
     for _sql in ["ALTER TABLE users ADD COLUMN last_active TIMESTAMP","ALTER TABLE questions ADD COLUMN source TEXT DEFAULT 'ADMIN'","ALTER TABLE questions ADD COLUMN exam TEXT","ALTER TABLE questions ADD COLUMN year INTEGER","ALTER TABLE sessions ADD COLUMN remaining_seconds INTEGER DEFAULT 0","ALTER TABLE sessions ADD COLUMN paused_at TIMESTAMP"]:
@@ -1357,8 +1365,15 @@ async def today_target(update: Update, context: ContextTypes.DEFAULT_TYPE):
     tp = r['s'] or 0
     await update.message.reply_text(f"📅 <b>Aaj ka Target</b>\n\n🎯 Target: {target}\n📈 Aaj: {tp}\n{'✅ Complete!' if tp >= target else '⏳ Aur mehnat!'}", parse_mode=ParseMode.HTML)
 
+async def support_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['awaiting'] = 'support_query'
+    await update.effective_message.reply_text(
+        "🆘 <b>Support</b>\n\nApni problem ya query ek message mein bhejo. Admin team ko ticket mil jayega.\n\nCancel karne ke liye /cancel bhejo.",
+        parse_mode=ParseMode.HTML,
+    )
+
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("❓ <b>Help</b>\n\n📚 Padhai Shuru\n📸 Doubt Clear\n🎭 Mode Badlo\n🎯 Exam Countdown\n📊 Report\n🏆 Points\n🏅 Leaderboard\n🎖️ Badges\n💭 Thought / 😂 Meme\n\nCommands: /start /admin /help /mode", parse_mode=ParseMode.HTML)
+    await update.message.reply_text("❓ <b>Help</b>\n\n📚 Padhai Shuru\n📸 Doubt Clear\n🎭 Mode Badlo\n🎯 Exam Countdown\n📊 Report\n🏆 Points\n🏅 Leaderboard\n🎖️ Badges\n💭 Thought / 😂 Meme\n🆘 Support ke liye menu mein ❓ Help dabao.\n\nCommands: /start /admin /help /mode /cancel", parse_mode=ParseMode.HTML)
 
 async def mode_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE): await mode_menu(update, context)
 
@@ -1849,6 +1864,8 @@ async def msg_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     touch_user(uid); u = get_user(uid)
     if u and u.get('is_banned'): await update.message.reply_text("🚫 Banned."); return
     txt = (update.message.text or "").strip(); aw = context.user_data.get('awaiting')
+    if aw == 'support_query': await support_query_msg(update, context); return
+    if aw == 'sup_reply': await support_reply_msg(update, context); return
     if aw == 'custom_minutes': await custom_minutes_msg(update, context); return
     if aw == 'doubt_photo': await doubt_photo(update, context); return
     if aw == 'broadcast': await broadcast_msg(update, context); return
@@ -1884,7 +1901,7 @@ async def msg_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if txt == "🎯 Exam Countdown": await exam_countdown(update, context); return
     if txt == "💭 Thought": await thought_view(update, context); return
     if txt == "😂 Meme": await meme_view(update, context); return
-    if txt == "❓ Help": await help_cmd(update, context); return
+    if txt == "❓ Help": await support_start(update, context); return
 
     # Any other normal chat message goes to AI instead of being ignored.
     if txt:
@@ -1902,6 +1919,330 @@ async def msg_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
             log.exception("AI chat reply failed: %s", e)
             await update.message.reply_text("⚠️ AI reply me temporary problem hui. Dobara try karo.")
         return
+
+
+# ================== SECURITY / SUPPORT / STAFF ==================
+_LAST_UPDATE_AT = {}
+_LAST_UPDATE_LOCK = threading.Lock()
+
+def audit_admin_action(admin_id, action):
+    try:
+        c = db()
+        c.execute("INSERT INTO admin_audit(admin_id, action) VALUES(?, ?)", (int(admin_id), str(action)[:500]))
+        c.commit()
+        c.close()
+    except Exception:
+        log.exception("Admin audit write failed")
+
+def active_force_channels():
+    c = db()
+    rows = c.execute("SELECT id, chat_id, title, invite_link FROM force_channels WHERE is_active=1 ORDER BY id").fetchall()
+    c.close()
+    return [dict(r) for r in rows]
+
+def force_join_keyboard(channels):
+    rows = []
+    for channel in channels:
+        link = (channel.get("invite_link") or "").strip()
+        chat_id = str(channel.get("chat_id") or "")
+        if not link and chat_id.startswith("@"):
+            link = "https://t.me/" + chat_id[1:]
+        if link.startswith(("https://t.me/", "http://t.me/", "tg://")):
+            rows.append([InlineKeyboardButton("📢 Join " + (channel.get("title") or "Channel")[:45], url=link)])
+    rows.append([InlineKeyboardButton("✅ I Joined — Verify", callback_data="fj_verify")])
+    return InlineKeyboardMarkup(rows)
+
+async def user_is_joined(bot, user_id):
+    for channel in active_force_channels():
+        try:
+            member = await bot.get_chat_member(chat_id=channel["chat_id"], user_id=user_id)
+            status = getattr(member, "status", "")
+            if status in ("left", "kicked"):
+                return False
+            if status == "restricted" and not getattr(member, "is_member", True):
+                return False
+        except Exception as exc:
+            # A channel the bot cannot access must not take down the whole bot.
+            log.warning("Force-join membership check skipped for channel %s: %s", channel["chat_id"], exc)
+            continue
+    return True
+
+async def show_force_join(target, channels):
+    markup = force_join_keyboard(channels)
+    msg = getattr(target, "message", None)
+    if msg is not None:
+        await msg.reply_text("🔒 <b>Channel join required</b>\n\nPehle active channel(s) join karo, phir verify dabao.", parse_mode=ParseMode.HTML, reply_markup=markup)
+    else:
+        try:
+            await target.edit_message_text("🔒 <b>Channel join required</b>\n\nPehle active channel(s) join karo, phir verify dabao.", parse_mode=ParseMode.HTML, reply_markup=markup)
+        except Exception:
+            await target.message.reply_text("🔒 Channel join karo, phir verify dabao.", reply_markup=markup)
+
+async def security_gate(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if user is None:
+        return
+    query = update.callback_query
+    message = update.effective_message
+    text_value = (message.text or "").strip() if message else ""
+    command = text_value.split(maxsplit=1)[0].split("@")[0].lower() if text_value.startswith("/") else ""
+    # /cancel and basic entry/help/admin commands remain reachable.
+    exempt = command in ("/start", "/help", "/cancel", "/admin")
+    now = time.monotonic()
+    with _LAST_UPDATE_LOCK:
+        previous = _LAST_UPDATE_AT.get(user.id, 0.0)
+        if now - previous < 0.7 and command != "/cancel":
+            throttled = True
+        else:
+            throttled = False
+            _LAST_UPDATE_AT[user.id] = now
+    if throttled:
+        if query:
+            try:
+                await query.answer("Thoda ruk kar dobara try karo.", show_alert=False)
+            except Exception:
+                pass
+        raise ApplicationHandlerStop
+    if is_admin(user.id):
+        if command.startswith("/") or query:
+            audit_admin_action(user.id, "command:" + command if command else "callback:" + str(query.data)[:300])
+        return
+    if query and query.data == "fj_verify":
+        try:
+            if await user_is_joined(context.bot, user.id):
+                await query.answer("Verification successful!", show_alert=False)
+                await query.edit_message_text("✅ Join verify ho gaya. Ab /start dabao.")
+            else:
+                await query.answer("Abhi active channel join nahi hua.", show_alert=True)
+                await show_force_join(query, active_force_channels())
+        except Exception:
+            log.exception("Force-join verification failed")
+        raise ApplicationHandlerStop
+    if exempt:
+        return
+    channels = active_force_channels()
+    if channels and not await user_is_joined(context.bot, user.id):
+        await show_force_join(update, channels)
+        raise ApplicationHandlerStop
+
+async def cancel_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data.clear()
+    await update.effective_message.reply_text("✅ Current flow cancel ho gaya.", reply_markup=main_menu_kb())
+
+async def support_query_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.effective_message
+    user = update.effective_user
+    query_text = (msg.text or msg.caption or "").strip()
+    if not query_text:
+        await msg.reply_text("Apni query text mein bhejo. Cancel: /cancel")
+        return
+    if len(query_text) > 4000:
+        await msg.reply_text("Query 4000 characters se chhoti rakho.")
+        return
+    c = db()
+    cur = c.execute(
+        "INSERT INTO support_tickets(user_id, username, query_text) VALUES(?, ?, ?)",
+        (user.id, user.username, query_text),
+    )
+    ticket_id = cur.lastrowid
+    c.commit()
+    admins = [r["user_id"] for r in c.execute("SELECT user_id FROM admins").fetchall()]
+    c.close()
+    if OWNER_ID > 0 and OWNER_ID not in admins:
+        admins.append(OWNER_ID)
+    context.user_data["awaiting"] = None
+    await msg.reply_text(f"✅ Support ticket #{ticket_id} submit ho gaya. Admin reply isi bot par milega.", reply_markup=main_menu_kb())
+    markup = InlineKeyboardMarkup([[
+        InlineKeyboardButton("↩️ Reply", callback_data=f"support_reply:{ticket_id}"),
+        InlineKeyboardButton("🔒 Close", callback_data=f"support_close:{ticket_id}"),
+    ]])
+    delivered = 0
+    for admin_id in admins:
+        try:
+            await context.bot.send_message(
+                chat_id=admin_id,
+                text=f"🆘 <b>Support ticket #{ticket_id}</b>\nUser: <code>{user.id}</code> (@{escape(user.username or 'unknown')})\n\n{escape(query_text)}",
+                parse_mode=ParseMode.HTML,
+                reply_markup=markup,
+            )
+            delivered += 1
+        except Exception:
+            log.exception("Could not notify admin %s about support ticket %s", admin_id, ticket_id)
+    if not delivered:
+        log.error("Support ticket %s saved but no admin notification delivered", ticket_id)
+
+async def support_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    if not is_admin(q.from_user.id):
+        await q.edit_message_text("⛔ Admin access required.")
+        return
+    action, ticket_s = q.data.split(":", 1)
+    ticket_id = int(ticket_s)
+    c = db()
+    ticket = c.execute("SELECT * FROM support_tickets WHERE id=?", (ticket_id,)).fetchone()
+    if not ticket:
+        c.close()
+        await q.edit_message_text("Ticket nahi mila.")
+        return
+    if action == "support_close":
+        c.execute("UPDATE support_tickets SET status='closed', updated_at=CURRENT_TIMESTAMP WHERE id=? AND status!='closed'", (ticket_id,))
+        c.commit()
+        c.close()
+        audit_admin_action(q.from_user.id, f"support_close:{ticket_id}")
+        await q.edit_message_text(f"🔒 Ticket #{ticket_id} closed.")
+        return
+    c.close()
+    context.user_data["awaiting"] = "sup_reply"
+    context.user_data["sup_reply_ticket_id"] = ticket_id
+    await q.message.reply_text(f"↩️ Ticket #{ticket_id} ka reply text bhejo. Cancel: /cancel")
+
+async def support_reply_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = update.effective_message
+    admin_id = update.effective_user.id
+    ticket_id = context.user_data.get("sup_reply_ticket_id")
+    reply_text = (msg.text or "").strip()
+    if not is_admin(admin_id) or not ticket_id:
+        context.user_data.pop("sup_reply_ticket_id", None)
+        context.user_data["awaiting"] = None
+        await msg.reply_text("Ticket reply session expire ho gaya. /admin se dobara try karo.")
+        return
+    if not reply_text:
+        await msg.reply_text("Reply text bhejo. Cancel: /cancel")
+        return
+    c = db()
+    ticket = c.execute("SELECT user_id, status FROM support_tickets WHERE id=?", (ticket_id,)).fetchone()
+    c.close()
+    if not ticket or ticket["status"] == "closed":
+        context.user_data["awaiting"] = None
+        context.user_data.pop("sup_reply_ticket_id", None)
+        await msg.reply_text("Ticket missing ya closed hai.")
+        return
+    try:
+        await context.bot.send_message(
+            chat_id=ticket["user_id"],
+            text=f"💬 <b>Support reply — Ticket #{ticket_id}</b>\n\n{escape(reply_text[:4000])}",
+            parse_mode=ParseMode.HTML,
+        )
+    except Exception:
+        log.exception("Support reply delivery failed for ticket %s", ticket_id)
+        await msg.reply_text("❌ User ko reply deliver nahi hua. Ticket open hi rakha hai; baad mein retry karo.")
+        return
+    c = db()
+    c.execute(
+        "UPDATE support_tickets SET status='replied', reply_text=?, replied_by=?, updated_at=CURRENT_TIMESTAMP WHERE id=?",
+        (reply_text[:4000], admin_id, ticket_id),
+    )
+    c.commit()
+    c.close()
+    audit_admin_action(admin_id, f"support_reply:{ticket_id}")
+    context.user_data["awaiting"] = None
+    context.user_data.pop("sup_reply_ticket_id", None)
+    await msg.reply_text(f"✅ Reply ticket #{ticket_id} ke user ko deliver ho gaya.")
+
+async def forcejoin_add_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user.id):
+        await update.effective_message.reply_text("⛔ Admin only.")
+        return
+    raw = " ".join(context.args).strip()
+    try:
+        chat_id, title, invite_link = [part.strip() for part in raw.split("|", 2)]
+        if not chat_id or not title:
+            raise ValueError
+        if invite_link and not invite_link.startswith(("https://t.me/", "http://t.me/", "tg://")):
+            raise ValueError
+        c = db()
+        c.execute(
+            "INSERT INTO force_channels(chat_id, title, invite_link, is_active) VALUES(?, ?, ?, 1) "
+            "ON CONFLICT(chat_id) DO UPDATE SET title=excluded.title, invite_link=excluded.invite_link, is_active=1",
+            (chat_id, title[:100], invite_link[:500]),
+        )
+        c.commit()
+        c.close()
+        audit_admin_action(update.effective_user.id, f"forcejoin_add:{chat_id}")
+        await update.effective_message.reply_text("✅ Force-join channel active ho gaya.")
+    except ValueError:
+        await update.effective_message.reply_text("Format: /forcejoin_add @channel | Channel Name | https://t.me/channel\nPrivate channel ke liye invite link do.")
+
+async def forcejoin_off_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user.id):
+        await update.effective_message.reply_text("⛔ Admin only.")
+        return
+    if not context.args or not context.args[0].isdigit():
+        await update.effective_message.reply_text("Format: /forcejoin_off ID  (ID admin ko DB se milta hai).")
+        return
+    channel_id = int(context.args[0])
+    c = db()
+    cur = c.execute("UPDATE force_channels SET is_active=0 WHERE id=? AND is_active=1", (channel_id,))
+    c.commit()
+    c.close()
+    audit_admin_action(update.effective_user.id, f"forcejoin_off:{channel_id}")
+    await update.effective_message.reply_text("✅ Channel deactivated." if cur.rowcount else "Active channel ID nahi mila.")
+
+async def add_ticket_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user.id):
+        await update.effective_message.reply_text("⛔ Admin only.")
+        return
+    raw = " ".join(context.args).strip()
+    try:
+        code, attendee, details = [part.strip() for part in raw.split("|", 2)]
+        if not re.fullmatch(r"[A-Za-z0-9_-]{3,64}", code) or not attendee:
+            raise ValueError
+        c = db()
+        c.execute("INSERT INTO event_tickets(code, attendee_name, details) VALUES(?, ?, ?)", (code.upper(), attendee[:150], details[:1000]))
+        c.commit()
+        c.close()
+        audit_admin_action(update.effective_user.id, f"event_ticket_create:{code.upper()}")
+        await update.effective_message.reply_text(f"✅ Ticket {escape(code.upper())} created.")
+    except ValueError:
+        await update.effective_message.reply_text("Format: /addticket CODE | Attendee Name | Details")
+    except sqlite3.IntegrityError:
+        await update.effective_message.reply_text("❌ Ye ticket code pehle se maujood hai.")
+
+async def check_ticket_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user.id):
+        await update.effective_message.reply_text("⛔ Staff only.")
+        return
+    if not context.args:
+        await update.effective_message.reply_text("Format: /check CODE")
+        return
+    code = context.args[0].strip().upper()
+    c = db()
+    row = c.execute(
+        "UPDATE event_tickets SET is_checked_in=1, checked_in_by=?, checked_in_at=CURRENT_TIMESTAMP "
+        "WHERE code=? AND is_checked_in=0 RETURNING code, attendee_name, details",
+        (update.effective_user.id, code),
+    ).fetchone()
+    if row:
+        c.commit()
+        c.close()
+        audit_admin_action(update.effective_user.id, f"ticket_checkin:{code}")
+        await update.effective_message.reply_text(f"✅ VALID — checked in\n🎟️ {escape(row['code'])}\n👤 {escape(row['attendee_name'])}")
+        return
+    c.rollback()
+    row = c.execute("SELECT code FROM event_tickets WHERE code=?", (code,)).fetchone()
+    c.close()
+    await update.effective_message.reply_text("⚠️ ALREADY USED" if row else "❌ INVALID CODE")
+
+async def ticket_info_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user.id):
+        await update.effective_message.reply_text("⛔ Staff only.")
+        return
+    if not context.args:
+        await update.effective_message.reply_text("Format: /info CODE")
+        return
+    code = context.args[0].strip().upper()
+    c = db()
+    row = c.execute("SELECT code, attendee_name, details, is_checked_in, checked_in_at FROM event_tickets WHERE code=?", (code,)).fetchone()
+    c.close()
+    if not row:
+        await update.effective_message.reply_text("❌ INVALID CODE")
+        return
+    await update.effective_message.reply_text(
+        f"🎟️ <b>Ticket {escape(row['code'])}</b>\n👤 {escape(row['attendee_name'])}\n📝 {escape(row['details'] or 'No details')}\n📍 Status: {'USED' if row['is_checked_in'] else 'VALID / UNUSED'}\n🕒 Check-in: {escape(str(row['checked_in_at'] or '—'))}",
+        parse_mode=ParseMode.HTML,
+    )
+
 
 # ================== GLOBAL TELEGRAM ERROR HANDLER ==================
 async def bot_error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
@@ -1959,6 +2300,9 @@ def main():
 
     for cmd, fn in [
         ("start", start), ("app", app_cmd), ("help", help_cmd), ("admin", admin_cmd),
+        ("cancel", cancel_cmd), ("check", check_ticket_cmd), ("info", ticket_info_cmd),
+        ("addticket", add_ticket_cmd), ("forcejoin_add", forcejoin_add_cmd),
+        ("forcejoin_off", forcejoin_off_cmd),
         ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel),
         ("addq", addq), ("set", set_cmd), ("settime", settime_cmd),
         ("addadmin", addadmin), ("removeadmin", removeadmin), ("userinfo", userinfo),
@@ -1968,6 +2312,9 @@ def main():
         ("addpyq", addpyq)
     ]:
         app.add_handler(CommandHandler(cmd, fn))
+
+    app.add_handler(TypeHandler(Update, security_gate, block=True), group=-1)
+    app.add_handler(CallbackQueryHandler(support_callback, pattern=r"^support_(reply|close):\d+$"), group=0)
 
     for pat, fn in [
         ("^a_app_missing$", app_missing_cb), ("^cls_", class_cb),
