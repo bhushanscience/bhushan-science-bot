@@ -1614,7 +1614,7 @@ async def settime_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def addadmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != OWNER_ID: return
     try:
-        uid = int(update.message.text.split(" ", 1)[1]); c = db(); c.execute("INSERT OR IGNORE INTO admins(user_id,added_by) VALUES(?,?)", (uid, OWNER_ID)); c.commit(); c.close()
+        uid = int(update.message.text.split(" ", 1)[1]); c = db(); c.execute("INSERT INTO admins(user_id,added_by,is_active) VALUES(?,?,1) ON CONFLICT(user_id) DO UPDATE SET is_active=1, added_by=excluded.added_by", (uid, OWNER_ID)); c.commit(); c.close()
         await update.message.reply_text(f"✅ Admin: {uid}")
     except: await update.message.reply_text("❌ /addadmin ID")
 
@@ -1782,7 +1782,7 @@ async def daily_quote_job(context):
         except: pass
 
 async def daily_meme_job(context):
-    c = db(); m = c.execute("SELECT file_id,caption FROM memes ORDER BY RANDOM() LIMIT 1").fetchone()
+    c = db(); m = c.execute("SELECT file_id,caption FROM memes WHERE is_active=1 ORDER BY RANDOM() LIMIT 1").fetchone()
     users = [r['user_id'] for r in c.execute("SELECT user_id FROM users WHERE is_banned=0").fetchall()]; c.close()
     if not m: return
     for u in users:
@@ -2164,6 +2164,20 @@ async def forcejoin_add_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except ValueError:
         await update.effective_message.reply_text("Format: /forcejoin_add @channel | Channel Name | https://t.me/channel\nPrivate channel ke liye invite link do.")
 
+async def forcejoin_list_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not is_admin(update.effective_user.id):
+        await update.effective_message.reply_text("⛔ Admin only.")
+        return
+    channels = active_force_channels()
+    if not channels:
+        await update.effective_message.reply_text("Koi active force-join channel configured nahi hai.")
+        return
+    lines = ["📢 <b>Active force-join channels</b>"]
+    for channel in channels:
+        lines.append(f"ID <code>{channel['id']}</code> — {escape(channel['title'])} (<code>{escape(channel['chat_id'])}</code>)")
+    lines.append("\nDisable: <code>/forcejoin_off ID</code>")
+    await update.effective_message.reply_text("\n".join(lines), parse_mode=ParseMode.HTML)
+
 async def forcejoin_off_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id):
         await update.effective_message.reply_text("⛔ Admin only.")
@@ -2302,7 +2316,7 @@ def main():
         ("start", start), ("app", app_cmd), ("help", help_cmd), ("admin", admin_cmd),
         ("cancel", cancel_cmd), ("check", check_ticket_cmd), ("info", ticket_info_cmd),
         ("addticket", add_ticket_cmd), ("forcejoin_add", forcejoin_add_cmd),
-        ("forcejoin_off", forcejoin_off_cmd),
+        ("forcejoin_list", forcejoin_list_cmd), ("forcejoin_off", forcejoin_off_cmd),
         ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel),
         ("addq", addq), ("set", set_cmd), ("settime", settime_cmd),
         ("addadmin", addadmin), ("removeadmin", removeadmin), ("userinfo", userinfo),
