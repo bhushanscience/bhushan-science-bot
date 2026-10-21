@@ -31,6 +31,32 @@ class DatabaseMigrationTests(unittest.TestCase):
                 .issubset(tables)
             )
 
+    def test_soft_deleted_rows_are_retained(self):
+        bot.init_db()
+        with sqlite3.connect(bot.DB_FILE) as conn:
+            conn.execute(
+                "INSERT INTO quotes(text, author, is_active) VALUES(?, ?, 1)",
+                ("Keep this row", "test"),
+            )
+            conn.commit()
+            conn.execute(
+                "UPDATE quotes SET is_active=0 WHERE text=?",
+                ("Keep this row",),
+            )
+            conn.commit()
+            row = conn.execute(
+                "SELECT text, is_active FROM quotes WHERE text=?",
+                ("Keep this row",),
+            ).fetchone()
+        self.assertEqual(row, ("Keep this row", 0))
+
+    def test_source_has_no_hard_delete_or_replace_statements(self):
+        source_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "bot.py")
+        with open(source_path, encoding="utf-8") as source_file:
+            source = source_file.read().upper()
+        self.assertNotIn("DELETE FROM", source)
+        self.assertNotIn("INSERT OR REPLACE", source)
+
     def test_ticket_checkin_is_single_use(self):
         bot.init_db()
         with sqlite3.connect(bot.DB_FILE) as conn:
