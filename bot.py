@@ -2022,7 +2022,7 @@ async def security_gate(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     channels = active_force_channels()
     if channels and not await user_is_joined(context.bot, user.id):
-        await show_force_join(update, channels)
+        await show_force_join(query if query else update, channels)
         raise ApplicationHandlerStop
 
 async def cancel_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
