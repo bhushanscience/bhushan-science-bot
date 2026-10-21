@@ -575,14 +575,14 @@ async def detailed_topic_info(subject, topic):
 def init_db():
     c = sqlite3.connect(DB_FILE); cur = c.cursor()
     cur.execute('''CREATE TABLE IF NOT EXISTS users(user_id INTEGER PRIMARY KEY, name TEXT, age INTEGER, user_class TEXT, stream TEXT, exam_target TEXT, points INTEGER DEFAULT 0, streak INTEGER DEFAULT 0, last_study DATE, total_minutes INTEGER DEFAULT 0, is_banned INTEGER DEFAULT 0, verified INTEGER DEFAULT 0, current_session INTEGER DEFAULT 0, quiz_correct INTEGER DEFAULT 0, sessions_done INTEGER DEFAULT 0, mode TEXT DEFAULT 'serious', techniques_used TEXT DEFAULT '', joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-    cur.execute('''CREATE TABLE IF NOT EXISTS admins(user_id INTEGER PRIMARY KEY, added_by INTEGER, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-    cur.execute('''CREATE TABLE IF NOT EXISTS channels(id INTEGER PRIMARY KEY AUTOINCREMENT, channel_id TEXT UNIQUE, channel_name TEXT, channel_link TEXT, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS admins(user_id INTEGER PRIMARY KEY, added_by INTEGER, is_active INTEGER NOT NULL DEFAULT 1, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS channels(id INTEGER PRIMARY KEY AUTOINCREMENT, channel_id TEXT UNIQUE, channel_name TEXT, channel_link TEXT, is_active INTEGER NOT NULL DEFAULT 1, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     cur.execute('''CREATE TABLE IF NOT EXISTS questions(id INTEGER PRIMARY KEY AUTOINCREMENT, subject TEXT, topic TEXT, question TEXT, option_a TEXT, option_b TEXT, option_c TEXT, option_d TEXT, correct_option TEXT, explanation TEXT, difficulty TEXT, class_level TEXT, source TEXT DEFAULT 'ADMIN', exam TEXT, year INTEGER, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     cur.execute('''CREATE TABLE IF NOT EXISTS sessions(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, subject TEXT, technique TEXT, mode TEXT, planned_minutes INTEGER, actual_minutes INTEGER DEFAULT 0, start_time TIMESTAMP, end_time TIMESTAMP, status TEXT DEFAULT 'running', q_asked INTEGER DEFAULT 0, q_correct INTEGER DEFAULT 0, photo_file_id TEXT, remaining_seconds INTEGER DEFAULT 0, paused_at TIMESTAMP)''')
     cur.execute('''CREATE TABLE IF NOT EXISTS doubts(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, subject TEXT, question_text TEXT, photo_file_id TEXT, answer TEXT, status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     cur.execute('''CREATE TABLE IF NOT EXISTS points_log(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, points INTEGER, reason TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-    cur.execute('''CREATE TABLE IF NOT EXISTS quotes(id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT, author TEXT, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
-    cur.execute('''CREATE TABLE IF NOT EXISTS memes(id INTEGER PRIMARY KEY AUTOINCREMENT, file_id TEXT, caption TEXT, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS quotes(id INTEGER PRIMARY KEY AUTOINCREMENT, text TEXT, author TEXT, is_active INTEGER NOT NULL DEFAULT 1, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS memes(id INTEGER PRIMARY KEY AUTOINCREMENT, file_id TEXT, caption TEXT, is_active INTEGER NOT NULL DEFAULT 1, added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     cur.execute('''CREATE TABLE IF NOT EXISTS badges(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, badge_key TEXT, unlocked_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE(user_id, badge_key))''')
     cur.execute('''CREATE TABLE IF NOT EXISTS exam_dates(user_id INTEGER PRIMARY KEY, exam_name TEXT, exam_date DATE, set_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     cur.execute('''CREATE TABLE IF NOT EXISTS daily_quiz(id INTEGER PRIMARY KEY AUTOINCREMENT, quiz_date DATE UNIQUE, question TEXT, option_a TEXT, option_b TEXT, option_c TEXT, option_d TEXT, correct_option TEXT, explanation TEXT)''')
@@ -607,12 +607,12 @@ def init_db():
         checked_in_at TIMESTAMP, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     defaults = {'force_join_enabled': '0', 'force_join_configured': '0', 'join_fun_name': '', 'join_fun_link': '', 'reward_points': '10', 'punishment_points': '20', 'nag_message_count': '5', 'daily_points_target': '50', 'bot_name': 'Bhushan Science', 'welcome_msg': 'Padhai karo!', 'quote_time': '07:00', 'meme_time': '21:00', 'quiz_time': '20:00', 'break_reminder': '1', 'auto_meme_enabled': '1', 'meme_chat_id': MEME_CHAT_ID, 'auto_meme_interval': '1800'}
     for k, v in defaults.items(): cur.execute("INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)", (k, v))
-    for _sql in ["ALTER TABLE users ADD COLUMN last_active TIMESTAMP","ALTER TABLE questions ADD COLUMN source TEXT DEFAULT 'ADMIN'","ALTER TABLE questions ADD COLUMN exam TEXT","ALTER TABLE questions ADD COLUMN year INTEGER","ALTER TABLE sessions ADD COLUMN remaining_seconds INTEGER DEFAULT 0","ALTER TABLE sessions ADD COLUMN paused_at TIMESTAMP"]:
+    for _sql in ["ALTER TABLE users ADD COLUMN last_active TIMESTAMP","ALTER TABLE questions ADD COLUMN source TEXT DEFAULT 'ADMIN'","ALTER TABLE questions ADD COLUMN exam TEXT","ALTER TABLE questions ADD COLUMN year INTEGER","ALTER TABLE sessions ADD COLUMN remaining_seconds INTEGER DEFAULT 0","ALTER TABLE sessions ADD COLUMN paused_at TIMESTAMP","ALTER TABLE admins ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1","ALTER TABLE channels ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1","ALTER TABLE quotes ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1","ALTER TABLE memes ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1"]:
         try: cur.execute(_sql)
         except sqlite3.OperationalError: pass
-    cur.execute("INSERT OR IGNORE INTO admins(user_id,added_by) VALUES(?,?)", (OWNER_ID, OWNER_ID))
+    cur.execute("INSERT INTO admins(user_id,added_by,is_active) VALUES(?,?,1) ON CONFLICT(user_id) DO UPDATE SET is_active=1", (OWNER_ID, OWNER_ID))
     for q, a in [("Padhai karne wale ke paas waqt nahi hota, aur na padhne wale ke paas bahane.", "Bhushan Science"), ("Success ka shortcut sirf mehnat aur consistency hai.", "Bhushan Science"), ("Jo aaj padhega, wahi kal topper banega.", "Bhushan Science")]:
-        cur.execute("INSERT INTO quotes(text,author) SELECT ?,? WHERE NOT EXISTS(SELECT 1 FROM quotes)", (q, a))
+        cur.execute("INSERT INTO quotes(text,author,is_active) SELECT ?,?,1 WHERE NOT EXISTS(SELECT 1 FROM quotes WHERE is_active=1)", (q, a))
     c.commit(); c.close()
 
 def touch_user(uid):
@@ -625,8 +625,8 @@ def touch_user(uid):
 
 def db(): c = sqlite3.connect(DB_FILE); c.row_factory = sqlite3.Row; return c
 def get_setting(k, d=None): c = db(); r = c.execute("SELECT value FROM settings WHERE key=?", (k,)).fetchone(); c.close(); return r['value'] if r else d
-def set_setting(k, v): c = db(); c.execute("INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)", (k, str(v))); c.commit(); c.close()
-def is_admin(uid): c = db(); r = c.execute("SELECT 1 FROM admins WHERE user_id=?", (uid,)).fetchone(); c.close(); return bool(r) or uid == OWNER_ID
+def set_setting(k, v): c = db(); c.execute("INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", (k, str(v))); c.commit(); c.close()
+def is_admin(uid): c = db(); r = c.execute("SELECT 1 FROM admins WHERE user_id=? AND is_active=1", (uid,)).fetchone(); c.close(); return bool(r) or (uid == OWNER_ID and uid > 0)
 def get_user(uid): c = db(); r = c.execute("SELECT * FROM users WHERE user_id=?", (uid,)).fetchone(); c.close(); return dict(r) if r else None
 def create_user(uid, name): c = db(); c.execute("INSERT OR IGNORE INTO users(user_id,name) VALUES(?,?)", (uid, name)); c.commit(); c.close()
 def update_user(uid, **kw):
@@ -634,7 +634,7 @@ def update_user(uid, **kw):
     c = db(); f = ", ".join([f"{k}=?" for k in kw]); c.execute(f"UPDATE users SET {f} WHERE user_id=?", list(kw.values()) + [uid]); c.commit(); c.close()
 def add_points(uid, pts, reason):
     c = db(); c.execute("UPDATE users SET points = MAX(0, points + ?) WHERE user_id=?", (pts, uid)); c.execute("INSERT INTO points_log(user_id,points,reason) VALUES(?,?,?)", (uid, pts, reason)); c.commit(); c.close(); check_badges(uid)
-def all_channels(): c = db(); rows = c.execute("SELECT * FROM channels").fetchall(); c.close(); return [dict(r) for r in rows]
+def all_channels(): c = db(); rows = c.execute("SELECT * FROM channels WHERE is_active=1").fetchall(); c.close(); return [dict(r) for r in rows]
 def has_badge(uid, key): c = db(); r = c.execute("SELECT 1 FROM badges WHERE user_id=? AND badge_key=?", (uid, key)).fetchone(); c.close(); return bool(r)
 def give_badge(uid, key):
     if has_badge(uid, key): return False
@@ -973,7 +973,7 @@ def random_quote():
     """Return a fresh DB quote every time; never cache the previous quote."""
     try:
         c = db()
-        r = c.execute("SELECT text, author FROM quotes ORDER BY RANDOM() LIMIT 1").fetchone()
+        r = c.execute("SELECT text, author FROM quotes WHERE is_active=1 ORDER BY RANDOM() LIMIT 1").fetchone()
         c.close()
         if r:
             return f"💭 <b>Thought</b>\n\n<i>{escape(r['text'])}</i>\n\n— {escape(r['author'] or 'Bhushan Science')}"
@@ -1323,7 +1323,7 @@ async def doubt_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if answer: await update.message.reply_text(f"🤖 <b>Answer:</b>\n{answer}", parse_mode=ParseMode.HTML)
     else:
         await update.message.reply_text("📩 Doubt admin ko bhej diya.")
-        c = db(); admins = [r['user_id'] for r in c.execute("SELECT user_id FROM admins").fetchall()]; c.close()
+        c = db(); admins = [r['user_id'] for r in c.execute("SELECT user_id FROM admins WHERE is_active=1").fetchall()]; c.close()
         for a in admins:
             try:
                 if fid: await context.bot.send_photo(a, fid, caption=f"❓ Doubt from {uid}:\n{txt}")
@@ -1405,7 +1405,7 @@ async def exam_date_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try: d = datetime.fromisoformat(update.message.text.strip()).date()
     except: await update.message.reply_text("❌ Format: YYYY-MM-DD"); return
     uid = update.effective_user.id; name = context.user_data.get('exam_name', 'Exam')
-    c = db(); c.execute("INSERT OR REPLACE INTO exam_dates(user_id,exam_name,exam_date) VALUES(?,?,?)", (uid, name, d.isoformat())); c.commit(); c.close()
+    c = db(); c.execute("INSERT INTO exam_dates(user_id,exam_name,exam_date) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET exam_name=excluded.exam_name, exam_date=excluded.exam_date, set_at=CURRENT_TIMESTAMP", (uid, name, d.isoformat())); c.commit(); c.close()
     context.user_data['awaiting'] = None; days = (d - date.today()).days
     await update.message.reply_text(f"✅ <b>{name}</b>\n📅 {d.isoformat()}\n⏳ <b>{days} din bache</b>", parse_mode=ParseMode.HTML, reply_markup=main_menu_kb())
 
@@ -1414,7 +1414,7 @@ async def thought_view(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(random_quote(), parse_mode=ParseMode.HTML)
 
 async def meme_view(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    c = db(); r = c.execute("SELECT file_id, caption FROM memes ORDER BY RANDOM() LIMIT 1").fetchone(); c.close()
+    c = db(); r = c.execute("SELECT file_id, caption FROM memes WHERE is_active=1 ORDER BY RANDOM() LIMIT 1").fetchone(); c.close()
     if not r: await update.message.reply_text("😂 Koi meme nahi."); return
     try: await context.bot.send_photo(update.effective_user.id, r['file_id'], caption=f"😂 {r['caption'] or ''}")
     except: pass
@@ -1455,10 +1455,10 @@ async def admin_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if d == "a_settings": await settings_panel(q, context); return
     if d == "a_times": await times_panel(q, context); return
     if d == "a_quotes":
-        c = db(); cnt = c.execute("SELECT COUNT(*) c FROM quotes").fetchone()['c']; c.close()
+        c = db(); cnt = c.execute("SELECT COUNT(*) c FROM quotes WHERE is_active=1").fetchone()['c']; c.close()
         await q.edit_message_text(f"💭 Quotes — {cnt}\n\n/addquote text | author\n/delquote id\n/listquotes", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="a_menu")]])); return
     if d == "a_memes":
-        c = db(); cnt = c.execute("SELECT COUNT(*) c FROM memes").fetchone()['c']; c.close()
+        c = db(); cnt = c.execute("SELECT COUNT(*) c FROM memes WHERE is_active=1").fetchone()['c']; c.close()
         await q.edit_message_text(f"😂 Memes — {cnt}\n\n/addmeme (photo+caption)\n/delmeme id\n/listmemes", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="a_menu")]])); return
     if d == "a_questions": await q.edit_message_text("❓ /addq Sub|Topic|Q|A|B|C|D|Correct|Expl|Class", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="a_menu")]])); return
     if d == "a_stats":
@@ -1466,7 +1466,7 @@ async def admin_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await q.edit_message_text(f"📊 Users: {users}\nSessions: {sessions} ({done} done)", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="a_menu")]])); return
     if d == "a_users": await q.edit_message_text("👥 /userinfo ID\n/ban ID\n/unban ID\n/gift ID points", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="a_menu")]])); return
     if d == "a_admins":
-        c = db(); rows = c.execute("SELECT user_id FROM admins").fetchall(); c.close()
+        c = db(); rows = c.execute("SELECT user_id FROM admins WHERE is_active=1").fetchall(); c.close()
         txt = "👤 <b>Admins</b>\n\n" + "\n".join([f"• <code>{r['user_id']}</code>" for r in rows]) + "\n\n/addadmin ID\n/removeadmin ID"
         await q.edit_message_text(txt, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Back", callback_data="a_menu")]])); return
     if d == "a_broadcast": context.user_data['awaiting'] = 'broadcast'; await q.edit_message_text("📣 Broadcast message bhejo:", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="a_menu")]])); return
@@ -1521,7 +1521,7 @@ async def addchannel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
     try:
         args = update.message.text.split(" ", 1)[1].split("|"); cid, name, link = [a.strip() for a in args]
-        c = db(); c.execute("INSERT OR REPLACE INTO channels(channel_id,channel_name,channel_link) VALUES(?,?,?)", (cid, name, link)); c.commit(); c.close()
+        c = db(); c.execute("INSERT INTO channels(channel_id,channel_name,channel_link,is_active) VALUES(?,?,?,1) ON CONFLICT(channel_id) DO UPDATE SET channel_name=excluded.channel_name, channel_link=excluded.channel_link, is_active=1", (cid, name, link)); c.commit(); c.close()
         await update.message.reply_text(f"✅ {name}")
     except Exception as e: await update.message.reply_text(f"❌ /addchannel -100xxx | Name | link\n{e}")
 
@@ -1529,7 +1529,7 @@ async def delchannel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
     try:
         cid = update.message.text.split(" ", 1)[1].strip()
-        c = db(); c.execute("DELETE FROM channels WHERE channel_id=?", (cid,)); c.commit(); c.close()
+        c = db(); c.execute("UPDATE channels SET is_active=0 WHERE channel_id=? AND is_active=1", (cid,)); c.commit(); c.close()
         await update.message.reply_text("✅ Removed.")
     except: await update.message.reply_text("❌ /delchannel id")
 
@@ -1564,13 +1564,13 @@ async def addquote(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def delquote(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
     try:
-        qid = int(update.message.text.split(" ", 1)[1]); c = db(); c.execute("DELETE FROM quotes WHERE id=?", (qid,)); c.commit(); c.close()
+        qid = int(update.message.text.split(" ", 1)[1]); c = db(); c.execute("UPDATE quotes SET is_active=0 WHERE id=? AND is_active=1", (qid,)); c.commit(); c.close()
         await update.message.reply_text("✅ Removed.")
     except: await update.message.reply_text("❌ /delquote id")
 
 async def listquotes(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
-    c = db(); rows = c.execute("SELECT id,text,author FROM quotes ORDER BY id DESC LIMIT 20").fetchall(); c.close()
+    c = db(); rows = c.execute("SELECT id,text,author FROM quotes WHERE is_active=1 ORDER BY id DESC LIMIT 20").fetchall(); c.close()
     txt = "💭 <b>Quotes</b>\n\n"
     for r in rows: txt += f"<code>{r['id']}</code> — {r['text'][:60]}\n"
     await update.message.reply_text(txt, parse_mode=ParseMode.HTML)
@@ -1585,13 +1585,13 @@ async def addmeme(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def delmeme(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
     try:
-        mid = int(update.message.text.split(" ", 1)[1]); c = db(); c.execute("DELETE FROM memes WHERE id=?", (mid,)); c.commit(); c.close()
+        mid = int(update.message.text.split(" ", 1)[1]); c = db(); c.execute("UPDATE memes SET is_active=0 WHERE id=? AND is_active=1", (mid,)); c.commit(); c.close()
         await update.message.reply_text("✅ Removed.")
     except: await update.message.reply_text("❌ /delmeme id")
 
 async def listmemes(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_admin(update.effective_user.id): return
-    c = db(); rows = c.execute("SELECT id,caption FROM memes ORDER BY id DESC LIMIT 20").fetchall(); c.close()
+    c = db(); rows = c.execute("SELECT id,caption FROM memes WHERE is_active=1 ORDER BY id DESC LIMIT 20").fetchall(); c.close()
     txt = "😂 <b>Memes</b>\n\n"
     for r in rows: txt += f"<code>{r['id']}</code> — {(r['caption'] or '')[:50]}\n"
     await update.message.reply_text(txt, parse_mode=ParseMode.HTML)
@@ -1623,7 +1623,7 @@ async def removeadmin(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         uid = int(update.message.text.split(" ", 1)[1])
         if uid == OWNER_ID: await update.message.reply_text("Owner remove nahi."); return
-        c = db(); c.execute("DELETE FROM admins WHERE user_id=?", (uid,)); c.commit(); c.close()
+        c = db(); c.execute("UPDATE admins SET is_active=0 WHERE user_id=? AND user_id<>? AND is_active=1", (uid, OWNER_ID)); c.commit(); c.close()
         await update.message.reply_text(f"✅ Removed: {uid}")
     except: await update.message.reply_text("❌ /removeadmin ID")
 
@@ -1691,7 +1691,7 @@ async def daily_quiz_admin_msg(update: Update, context: ContextTypes.DEFAULT_TYP
     try:
         parts = [x.strip() for x in update.message.text.split("|")]; q, a, b, cc, d, cor, expl = parts[:7]
         today = date.today().isoformat(); c = db()
-        c.execute("INSERT OR REPLACE INTO daily_quiz(quiz_date,question,option_a,option_b,option_c,option_d,correct_option,explanation) VALUES(?,?,?,?,?,?,?,?)", (today, q, a, b, cc, d, cor.lower(), expl))
+        c.execute("INSERT INTO daily_quiz(quiz_date,question,option_a,option_b,option_c,option_d,correct_option,explanation) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(quiz_date) DO UPDATE SET question=excluded.question, option_a=excluded.option_a, option_b=excluded.option_b, option_c=excluded.option_c, option_d=excluded.option_d, correct_option=excluded.correct_option, explanation=excluded.explanation", (today, q, a, b, cc, d, cor.lower(), expl))
         c.commit(); c.close(); context.user_data['awaiting'] = None
         await update.message.reply_text("✅ Aaj ka quiz set!")
         await broadcast_daily_quiz(context)
@@ -1757,8 +1757,8 @@ async def idle_coach_job(context):
     c.close()
     if not rows: return
     c=db()
-    quote=c.execute("SELECT text,author FROM quotes ORDER BY RANDOM() LIMIT 1").fetchone()
-    meme=c.execute("SELECT caption FROM memes ORDER BY RANDOM() LIMIT 1").fetchone()
+    quote=c.execute("SELECT text,author FROM quotes WHERE is_active=1 ORDER BY RANDOM() LIMIT 1").fetchone()
+    meme=c.execute("SELECT caption FROM memes WHERE is_active=1 ORDER BY RANDOM() LIMIT 1").fetchone()
     c.close()
     qtxt=f"💭 {quote['text']}" if quote else "💭 Aaj ka rule: consistency > motivation."
     mtxt=f"😂 Meme: {meme['caption']}" if meme and meme['caption'] else "😂 Meme: Notes kholne ka notification aa gaya… ab ignore mat karna."
@@ -1773,7 +1773,7 @@ async def idle_coach_job(context):
 
 # ================== AUTO JOBS ==================
 async def daily_quote_job(context):
-    c = db(); q = c.execute("SELECT text,author FROM quotes ORDER BY RANDOM() LIMIT 1").fetchone()
+    c = db(); q = c.execute("SELECT text,author FROM quotes WHERE is_active=1 ORDER BY RANDOM() LIMIT 1").fetchone()
     users = [r['user_id'] for r in c.execute("SELECT user_id FROM users WHERE is_banned=0").fetchall()]; c.close()
     if not q: return
     text = f"💭 <b>Good Morning</b>\n\n<i>{q['text']}</i>\n\n— {q['author']}"
@@ -1793,7 +1793,7 @@ async def auto_meme_job(context):
     if str(get_setting('auto_meme_enabled','1')).lower() not in ('1','true','yes','on'): return
     chat_id=get_setting('meme_chat_id',MEME_CHAT_ID).strip()
     if not chat_id: return
-    c=db(); rows=c.execute("SELECT id,file_id,caption FROM memes ORDER BY id").fetchall(); c.close()
+    c=db(); rows=c.execute("SELECT id,file_id,caption FROM memes WHERE is_active=1 ORDER BY id").fetchall(); c.close()
     last=int(get_setting('auto_meme_last_id','0') or 0)
     choices=[dict(r) for r in rows if r['id']!=last] or [dict(r) for r in rows]
     try:
@@ -2046,7 +2046,7 @@ async def support_query_msg(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     ticket_id = cur.lastrowid
     c.commit()
-    admins = [r["user_id"] for r in c.execute("SELECT user_id FROM admins").fetchall()]
+    admins = [r["user_id"] for r in c.execute("SELECT user_id FROM admins WHERE is_active=1").fetchall()]
     c.close()
     if OWNER_ID > 0 and OWNER_ID not in admins:
         admins.append(OWNER_ID)
