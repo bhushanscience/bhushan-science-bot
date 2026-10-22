@@ -597,6 +597,9 @@ def init_db():
     cur.execute('''CREATE TABLE IF NOT EXISTS daily_quiz(id INTEGER PRIMARY KEY AUTOINCREMENT, quiz_date DATE UNIQUE, question TEXT, option_a TEXT, option_b TEXT, option_c TEXT, option_d TEXT, correct_option TEXT, explanation TEXT)''')
     cur.execute('''CREATE TABLE IF NOT EXISTS quiz_answers(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, quiz_date DATE, chosen TEXT, correct INTEGER, UNIQUE(user_id, quiz_date))''')
     cur.execute('''CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT)''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS support_tickets(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, query TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', admin_id INTEGER, reply_text TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS admin_audit(id INTEGER PRIMARY KEY AUTOINCREMENT, admin_id INTEGER NOT NULL, action TEXT NOT NULL, details TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+    cur.execute('''CREATE TABLE IF NOT EXISTS force_channels(id INTEGER PRIMARY KEY AUTOINCREMENT, channel_id TEXT UNIQUE NOT NULL, title TEXT NOT NULL, username TEXT, invite_link TEXT, is_active INTEGER NOT NULL DEFAULT 1, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
     defaults = {'force_join_enabled': '0', 'force_join_configured': '0', 'join_fun_name': '', 'join_fun_link': '', 'reward_points': '10', 'punishment_points': '20', 'nag_message_count': '5', 'daily_points_target': '50', 'bot_name': 'Bhushan Science', 'welcome_msg': 'Padhai karo!', 'quote_time': '07:00', 'meme_time': '21:00', 'quiz_time': '20:00', 'break_reminder': '1', 'auto_meme_enabled': '1', 'meme_chat_id': MEME_CHAT_ID, 'auto_meme_interval': '1800'}
     for k, v in defaults.items(): cur.execute("INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)", (k, v))
     for _sql in ["ALTER TABLE users ADD COLUMN last_active TIMESTAMP","ALTER TABLE questions ADD COLUMN source TEXT DEFAULT 'ADMIN'","ALTER TABLE questions ADD COLUMN exam TEXT","ALTER TABLE questions ADD COLUMN year INTEGER","ALTER TABLE sessions ADD COLUMN remaining_seconds INTEGER DEFAULT 0","ALTER TABLE sessions ADD COLUMN paused_at TIMESTAMP"]:
@@ -619,6 +622,12 @@ def db(): c = sqlite3.connect(DB_FILE); c.row_factory = sqlite3.Row; return c
 def get_setting(k, d=None): c = db(); r = c.execute("SELECT value FROM settings WHERE key=?", (k,)).fetchone(); c.close(); return r['value'] if r else d
 def set_setting(k, v): c = db(); c.execute("INSERT OR REPLACE INTO settings(key,value) VALUES(?,?)", (k, str(v))); c.commit(); c.close()
 def is_admin(uid): c = db(); r = c.execute("SELECT 1 FROM admins WHERE user_id=?", (uid,)).fetchone(); c.close(); return bool(r) or uid == OWNER_ID
+
+def audit_admin(uid, action, details=''):
+    try:
+        c = db(); c.execute('INSERT INTO admin_audit(admin_id,action,details) VALUES(?,?,?)', (int(uid), str(action)[:120], str(details)[:1000])); c.commit(); c.close()
+    except Exception:
+        log.exception('Admin audit write failed')
 def get_user(uid): c = db(); r = c.execute("SELECT * FROM users WHERE user_id=?", (uid,)).fetchone(); c.close(); return dict(r) if r else None
 def create_user(uid, name): c = db(); c.execute("INSERT OR IGNORE INTO users(user_id,name) VALUES(?,?)", (uid, name)); c.commit(); c.close()
 def update_user(uid, **kw):
@@ -720,6 +729,7 @@ def admin_menu_kb():
         [InlineKeyboardButton("💭 Quotes", callback_data="a_quotes"), InlineKeyboardButton("😂 Memes", callback_data="a_memes")],
         [InlineKeyboardButton("📣 Broadcast", callback_data="a_broadcast"), InlineKeyboardButton("💬 Doubts", callback_data="a_doubts")],
         [InlineKeyboardButton("🎯 Daily Quiz", callback_data="a_dq"), InlineKeyboardButton("⏰ Times", callback_data="a_times")],
+        [InlineKeyboardButton("🆘 Support Tickets", callback_data="a_support"), InlineKeyboardButton("📣 Force Join", callback_data="a_forcejoin")],
         [InlineKeyboardButton("📊 Stats", callback_data="a_stats"), InlineKeyboardButton("👤 Admins", callback_data="a_admins")],
         [InlineKeyboardButton("🛡️ Ban/Unban", callback_data="a_ban"), InlineKeyboardButton("🎁 Gift Points", callback_data="a_gift")],
     ])
@@ -1358,7 +1368,42 @@ async def today_target(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(f"📅 <b>Aaj ka Target</b>\n\n🎯 Target: {target}\n📈 Aaj: {tp}\n{'✅ Complete!' if tp >= target else '⏳ Aur mehnat!'}", parse_mode=ParseMode.HTML)
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("❓ <b>Help</b>\n\n📚 Padhai Shuru\n📸 Doubt Clear\n🎭 Mode Badlo\n🎯 Exam Countdown\n📊 Report\n🏆 Points\n🏅 Leaderboard\n🎖️ Badges\n💭 Thought / 😂 Meme\n\nCommands: /start /admin /help /mode", parse_mode=ParseMode.HTML)
+    await update.message.reply_text("❓ <b>Help & Support</b>\n\n📚 Padhai Shuru\n📸 Doubt Clear\n🎭 Mode Badlo\n🎯 Exam Countdown\n📊 Report\n🏆 Points\n🏅 Leaderboard\n🎖️ Badges\n💭 Thought / 😂 Meme\n\nAgar help chahiye, neeche button dabao ya /support likho.\nCommands: /start /admin /help /support /cancel /mode", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🆘 Contact Support", callback_data="support_new")]]))
+
+async def support_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['awaiting'] = 'support_query'
+    await update.effective_message.reply_text('🆘 Apni problem ya question ek message mein bhejo. Cancel karne ke liye /cancel.')
+
+async def cancel_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data['awaiting'] = None
+    await update.effective_message.reply_text('✅ Current action cancel kar diya.')
+
+async def support_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q = update.callback_query
+    await q.answer()
+    if q.data == 'support_new':
+        context.user_data['awaiting'] = 'support_query'
+        await q.message.reply_text('🆘 Apni problem ya question ek message mein bhejo. Cancel karne ke liye /cancel.')
+        return
+    if not is_admin(q.from_user.id):
+        await q.answer('Admin only.', show_alert=True); return
+    parts = q.data.split(':')
+    if len(parts) != 2:
+        return
+    action, raw_id = parts
+    try: ticket_id = int(raw_id)
+    except ValueError: return
+    c = db(); ticket = c.execute('SELECT * FROM support_tickets WHERE id=?', (ticket_id,)).fetchone(); c.close()
+    if not ticket:
+        await q.message.reply_text('Ticket nahi mila.'); return
+    if action == 'ticket_reply':
+        context.user_data['awaiting'] = 'support_reply'
+        context.user_data['support_ticket_id'] = ticket_id
+        await q.message.reply_text(f'✍️ Ticket #{ticket_id} ka reply bhejo. /cancel se cancel hoga.')
+    elif action == 'ticket_close':
+        c = db(); c.execute("UPDATE support_tickets SET status='closed', admin_id=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND status!='closed'", (q.from_user.id, ticket_id)); c.commit(); c.close()
+        audit_admin(q.from_user.id, 'support_ticket_close', f'ticket_id={ticket_id}')
+        await q.message.reply_text(f'✅ Ticket #{ticket_id} close kar diya.')
 
 async def mode_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE): await mode_menu(update, context)
 
@@ -1413,7 +1458,24 @@ async def admin_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query; await q.answer()
     if not is_admin(q.from_user.id): await q.edit_message_text("❌ Not admin."); return
     d = q.data
+    audit_admin(q.from_user.id, 'admin_callback', d)
     if d == "a_menu": await q.edit_message_text("🛠️ Admin Panel", reply_markup=admin_menu_kb()); return
+    if d == 'a_support':
+        c = db(); rows = c.execute("SELECT id,user_id,query,status,created_at FROM support_tickets WHERE status IN ('pending','replied') ORDER BY id DESC LIMIT 12").fetchall(); c.close()
+        if not rows:
+            await q.edit_message_text('🆘 Koi open support ticket nahi hai.', reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton('🔙 Back', callback_data='a_menu')]])); return
+        buttons=[]; lines=['🆘 <b>Support Tickets</b>']
+        for t in rows:
+            lines.append(f"\\n<b>#{t['id']}</b> • user <code>{t['user_id']}</code> • {escape(t['status'])}\\n{escape(t['query'][:180])}")
+            buttons.append([InlineKeyboardButton(f"✍️ Reply #{t['id']}", callback_data=f"ticket_reply:{t['id']}"), InlineKeyboardButton(f"✅ Close #{t['id']}", callback_data=f"ticket_close:{t['id']}")])
+        buttons.append([InlineKeyboardButton('🔙 Back', callback_data='a_menu')])
+        await q.edit_message_text('\\n'.join(lines), parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(buttons)); return
+    if d == 'a_forcejoin':
+        c = db(); rows = c.execute('SELECT id,title,channel_id,invite_link,is_active FROM force_channels ORDER BY id DESC').fetchall(); c.close()
+        lines=['📣 <b>Force Join Channels</b>']
+        for ch in rows: lines.append(f"\\n#{ch['id']} • {escape(ch['title'])} • {'🟢 active' if ch['is_active'] else '⚪ disabled'}\\n<code>{escape(ch['channel_id'])}</code>")
+        lines.append('\\nAdd: /forceadd CHANNEL_ID | title | @username_or_blank | invite_link_or_blank\\nDisable: /forcedisable ID')
+        await q.edit_message_text('\\n'.join(lines), parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton('🔙 Back', callback_data='a_menu')]])); return
     if d == "a_channels": await channels_panel(q, context); return
     if d == "a_joinfun":
         context.user_data['awaiting'] = 'join_fun'
@@ -1849,6 +1911,33 @@ async def msg_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     touch_user(uid); u = get_user(uid)
     if u and u.get('is_banned'): await update.message.reply_text("🚫 Banned."); return
     txt = (update.message.text or "").strip(); aw = context.user_data.get('awaiting')
+    if aw == 'support_query':
+        query_text = (update.message.text or update.message.caption or '').strip()
+        if not query_text:
+            await update.message.reply_text('Text message bhejo ya /cancel karo.'); return
+        c = db(); cur = c.execute('INSERT INTO support_tickets(user_id,query,status) VALUES(?,?,\'pending\')', (uid, query_text[:4000])); ticket_id = cur.lastrowid; admins = [r['user_id'] for r in c.execute('SELECT user_id FROM admins').fetchall()]; c.commit(); c.close()
+        context.user_data['awaiting'] = None
+        await update.message.reply_text(f'✅ Support request #{ticket_id} submit ho gayi. Admin reply karega.')
+        kb = InlineKeyboardMarkup([[InlineKeyboardButton('✍️ Reply', callback_data=f'ticket_reply:{ticket_id}'), InlineKeyboardButton('✅ Close', callback_data=f'ticket_close:{ticket_id}')]])
+        for aid in set(admins + ([OWNER_ID] if OWNER_ID > 0 else [])):
+            try: await context.bot.send_message(aid, f'🆘 <b>Support Ticket #{ticket_id}</b>\\nUser: <code>{uid}</code>\\n\\n{escape(query_text[:3500])}', parse_mode=ParseMode.HTML, reply_markup=kb)
+            except Exception: log.exception('Failed to notify support admin %s for ticket %s', aid, ticket_id)
+        return
+    if aw == 'support_reply':
+        if not is_admin(uid): context.user_data['awaiting']=None; return
+        ticket_id = context.user_data.get('support_ticket_id')
+        reply_text = (update.message.text or '').strip()
+        if not reply_text: await update.message.reply_text('Text reply bhejo ya /cancel.'); return
+        c = db(); ticket = c.execute('SELECT user_id,status FROM support_tickets WHERE id=?', (ticket_id,)).fetchone()
+        if not ticket or ticket['status'] == 'closed':
+            c.close(); context.user_data['awaiting']=None; await update.message.reply_text('Ticket missing ya closed hai.'); return
+        c.execute("UPDATE support_tickets SET status='replied',admin_id=?,reply_text=?,updated_at=CURRENT_TIMESTAMP WHERE id=?", (uid, reply_text[:4000], ticket_id)); c.commit(); c.close()
+        context.user_data['awaiting']=None; context.user_data.pop('support_ticket_id', None)
+        audit_admin(uid, 'support_ticket_reply', f'ticket_id={ticket_id}')
+        try: await context.bot.send_message(ticket['user_id'], f'💬 <b>Support reply — ticket #{ticket_id}</b>\\n\\n{escape(reply_text[:3900])}', parse_mode=ParseMode.HTML)
+        except Exception: log.exception('Unable to deliver support reply for ticket %s', ticket_id)
+        await update.message.reply_text(f'✅ Reply ticket #{ticket_id} par bhej diya.')
+        return
     if aw == 'custom_minutes': await custom_minutes_msg(update, context); return
     if aw == 'doubt_photo': await doubt_photo(update, context); return
     if aw == 'broadcast': await broadcast_msg(update, context); return
@@ -1958,7 +2047,7 @@ def main():
     app.add_error_handler(bot_error_handler)
 
     for cmd, fn in [
-        ("start", start), ("app", app_cmd), ("help", help_cmd), ("admin", admin_cmd),
+        ("start", start), ("app", app_cmd), ("help", help_cmd), ("admin", admin_cmd), ("support", support_cmd), ("cancel", cancel_cmd),
         ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel),
         ("addq", addq), ("set", set_cmd), ("settime", settime_cmd),
         ("addadmin", addadmin), ("removeadmin", removeadmin), ("userinfo", userinfo),
@@ -1983,6 +2072,7 @@ def main():
         ("^sess_resume_", session_resume_cb), ("^sess_stop_", session_stop_cb),
         ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb),
         ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb),
+        ("^support_new$", support_callback), ("^ticket_(reply|close):\\d+$", support_callback),
         ("^a_fj", fj_toggle), ("^a_", admin_cb)
     ]:
         app.add_handler(CallbackQueryHandler(fn, pattern=pat))
