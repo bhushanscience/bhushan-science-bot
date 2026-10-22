@@ -1187,10 +1187,12 @@ async def custom_minutes_msg(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await start_study_session(context, update.effective_user.id)
 
 async def cancel_session_jobs(app, sid):
-    jq=app.job_queue
-    if not jq: return
-    for name in (f"session_break_{sid}",f"session_reminder_{sid}",f"session_nag_{sid}"):
-        for job in jq.get_jobs_by_name(name): job.schedule_removal()
+    jq = app.job_queue
+    if not jq:
+        return
+    for name in (f"session_break_{sid}", f"session_reminder_{sid}", f"session_nag_{sid}", f"session_quiz_timeout_{sid}"):
+        for job in jq.get_jobs_by_name(name):
+            job.schedule_removal()
 
 async def schedule_session_jobs(context, uid, sid, remaining_seconds):
     jq=context.job_queue
@@ -1285,14 +1287,33 @@ async def nag_check(context: ContextTypes.DEFAULT_TYPE):
 
 # ================== QUESTIONS ==================
 async def ask_questions(context, uid, sid):
-    u = get_user(uid); cls = u.get('user_class', 'Other')
-    c = db(); rows = c.execute("SELECT * FROM questions WHERE class_level IN (?, 'All') AND upper(COALESCE(source,''))='PYQ' ORDER BY RANDOM() LIMIT 3", (cls,)).fetchall(); c.close()
+    u = get_user(uid)
+    cls = (u or {}).get('user_class', 'Other')
+    c = db()
+    rows = c.execute(
+        "SELECT * FROM questions WHERE class_level IN (?, 'All') AND upper(COALESCE(source,''))='PYQ' ORDER BY RANDOM() LIMIT 3",
+        (cls,),
+    ).fetchall()
+    c.close()
     if not rows:
         await context.bot.send_message(uid, "ℹ️ Timer complete. Is class ke verified PYQs abhi available nahi hain. Session complete mark kiya ja raha hai.")
-        await finish_session(context, uid, sid, 0, 0); return
+        await finish_session(context, uid, sid, 0, 0)
+        return
     context.user_data[f'qq_{sid}'] = [dict(r) for r in rows]
-    context.user_data[f'qi_{sid}'] = 0; context.user_data[f'qc_{sid}'] = 0
-    await context.bot.send_message(uid, f"📝 Session #{sid} time up!\n\nAb 3 questions:")
+    context.user_data[f'qi_{sid}'] = 0
+    context.user_data[f'qc_{sid}'] = 0
+    # Prevent sessions getting stuck forever when a student leaves the quiz unanswered.
+    if context.job_queue:
+        for job in context.job_queue.get_jobs_by_name(f"session_quiz_timeout_{sid}"):
+            job.schedule_removal()
+        context.job_queue.run_once(
+            quiz_timeout,
+            15 * 60,
+            chat_id=uid,
+            data={'sid': sid},
+            name=f"session_quiz_timeout_{sid}",
+        )
+    await context.bot.send_message(uid, f"📝 Session #{sid} time up!\n\nAb {len(rows)} questions (15 min ke andar answer karo):")
     await send_next_question(context, uid, sid)
 
 async def send_next_question(context, uid, sid):
@@ -1303,21 +1324,84 @@ async def send_next_question(context, uid, sid):
     await context.bot.send_message(uid, f"<b>Q{i+1}.</b> {q['question']}", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(btns))
 
 async def answer_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); uid = q.from_user.id
-    parts = q.data.split("_"); sid = int(parts[1]); chosen = parts[2]
-    qs = context.user_data.get(f'qq_{sid}', []); i = context.user_data.get(f'qi_{sid}', 0)
-    if i >= len(qs): return
-    correct = qs[i].get('correct_option', 'a').lower(); expl = qs[i].get('explanation', '')
+    q = update.callback_query
+    await q.answer()
+    uid = q.from_user.id
+    try:
+        _, raw_sid, chosen = q.data.split("_", 2)
+        sid = int(raw_sid)
+    except (ValueError, TypeError):
+        return
+    user = get_user(uid)
+    if not user or int(user.get('current_session') or 0) != sid:
+        await q.answer("Ye quiz ab active nahi hai.", show_alert=True)
+        return
+    c = db()
+    session = c.execute("SELECT status FROM sessions WHERE id=? AND user_id=?", (sid, uid)).fetchone()
+    c.close()
+    if not session or session['status'] != 'awaiting_quiz':
+        await q.answer("Ye quiz ab active nahi hai.", show_alert=True)
+        return
+    qs = context.user_data.get(f'qq_{sid}', [])
+    i = context.user_data.get(f'qi_{sid}', 0)
+    if i >= len(qs):
+        return
+    correct = str(qs[i].get('correct_option', 'a')).strip().lower()
+    expl = escape(str(qs[i].get('explanation') or ''))
     if chosen == correct:
         context.user_data[f'qc_{sid}'] = context.user_data.get(f'qc_{sid}', 0) + 1
-        await q.edit_message_text(f"✅ Sahi! {expl}")
-    else: await q.edit_message_text(f"❌ Galat. Sahi: <b>{correct.upper()}</b>\n{expl}", parse_mode=ParseMode.HTML)
-    context.user_data[f'qi_{sid}'] = i + 1; await asyncio.sleep(1.5); await send_next_question(context, uid, sid)
+        await q.edit_message_text(f"✅ Sahi!\n{expl}", parse_mode=ParseMode.HTML)
+    else:
+        await q.edit_message_text(f"❌ Galat. Sahi: <b>{escape(correct.upper())}</b>\n{expl}", parse_mode=ParseMode.HTML)
+    context.user_data[f'qi_{sid}'] = i + 1
+    await asyncio.sleep(0.5)
+    await send_next_question(context, uid, sid)
+
+async def quiz_timeout(context: ContextTypes.DEFAULT_TYPE):
+    sid = int(context.job.data['sid'])
+    uid = int(context.job.chat_id)
+    user = get_user(uid)
+    if not user or int(user.get('current_session') or 0) != sid:
+        return
+    c = db()
+    cur = c.execute(
+        "UPDATE sessions SET status='failed', end_time=? WHERE id=? AND user_id=? AND status='awaiting_quiz'",
+        (datetime.now(), sid, uid),
+    )
+    c.commit()
+    changed = cur.rowcount
+    c.close()
+    if changed != 1:
+        return
+    add_points(uid, -7, f"Session #{sid} quiz not completed")
+    update_user(uid, current_session=0)
+    for key in (f'qq_{sid}', f'qi_{sid}', f'qc_{sid}'):
+        context.user_data.pop(key, None)
+    await context.bot.send_message(
+        uid,
+        "⏰ Quiz ka time khatam ho gaya aur answers complete nahi hue. Session incomplete mark hua.\n\n💎 -7 points. Agla session jab ready ho tab shuru karna.",
+        reply_markup=main_menu_kb(),
+    )
+
 
 async def finish_session(context, uid, sid, asked, correct):
-    total_pts = 5
-    c = db(); c.execute("UPDATE sessions SET status='completed', end_time=?, q_asked=?, q_correct=? WHERE id=?", (datetime.now(), asked, correct, sid))
-    row = c.execute("SELECT planned_minutes FROM sessions WHERE id=?", (sid,)).fetchone(); planned = row['planned_minutes'] if row else 0; c.close()
+    # Complete atomically so duplicate/stale callbacks cannot award points twice.
+    c = db()
+    cur = c.execute(
+        "UPDATE sessions SET status='completed', end_time=?, q_asked=?, q_correct=? "
+        "WHERE id=? AND user_id=? AND status='awaiting_quiz'",
+        (datetime.now(), asked, correct, sid, uid),
+    )
+    if cur.rowcount != 1:
+        c.close()
+        return
+    row = c.execute("SELECT planned_minutes FROM sessions WHERE id=? AND user_id=?", (sid, uid)).fetchone()
+    planned = row['planned_minutes'] if row else 0
+    c.commit()
+    c.close()
+    await cancel_session_jobs(context.application, sid)
+    for key in (f'qq_{sid}', f'qi_{sid}', f'qc_{sid}'):
+        context.user_data.pop(key, None)
     u = get_user(uid); total_min = (u['total_minutes'] or 0) + planned
     today = date.today().isoformat(); last = u.get('last_study'); streak = u.get('streak') or 0
     if last == today: pass
