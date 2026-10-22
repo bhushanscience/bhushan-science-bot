@@ -1320,8 +1320,17 @@ async def send_next_question(context, uid, sid):
     qs = context.user_data.get(f'qq_{sid}', []); i = context.user_data.get(f'qi_{sid}', 0)
     if i >= len(qs): await finish_session(context, uid, sid, len(qs), context.user_data.get(f'qc_{sid}', 0)); return
     q = qs[i]
-    btns = [[InlineKeyboardButton(f"{opt.upper()}) {q[f'option_{opt}']}", callback_data=f"ans_{sid}_{i}_{opt}")] for opt in ['a','b','c','d'] if q.get(f'option_{opt}')]
-    await context.bot.send_message(uid, f"<b>Q{i+1}.</b> {q['question']}", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(btns))
+    btns = [
+        [InlineKeyboardButton(f"{opt.upper()}) {escape(str(q[f'option_{opt}']))}", callback_data=f"ans_{sid}_{i}_{opt}")]
+        for opt in ['a', 'b', 'c', 'd'] if q.get(f'option_{opt}')
+    ]
+    question_text = escape(str(q.get('question') or 'Question unavailable'))
+    await context.bot.send_message(
+        uid,
+        f"<b>Q{i+1}.</b> {question_text}",
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup(btns),
+    )
 
 async def answer_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
@@ -2051,9 +2060,51 @@ def reschedule_jobs(app):
     )
     job_queue.run_repeating(idle_coach_job, interval=120, first=120, name="idle_coach")
     job_queue.run_repeating(online_source_update_job, interval=120, first=10, name="online_source_update")
-    try: meme_interval=max(300,int(get_setting("auto_meme_interval","1800") or 1800))
-    except: meme_interval=1800
-    job_queue.run_repeating(auto_meme_job,interval=meme_interval,first=60,name="auto_meme_publish")
+    try:
+        meme_interval = max(300, int(get_setting("auto_meme_interval", "1800") or 1800))
+    except (TypeError, ValueError):
+        meme_interval = 1800
+    job_queue.run_repeating(auto_meme_job, interval=meme_interval, first=60, name="auto_meme_publish")
+
+    # Recover timers after Render restarts/redeploys. User context is in-memory,
+    # so an interrupted quiz is safely re-opened rather than left stuck forever.
+    c = db()
+    active_rows = c.execute(
+        "SELECT id, user_id, status, start_time, planned_minutes, remaining_seconds "
+        "FROM sessions WHERE status IN ('running', 'awaiting_quiz') ORDER BY id"
+    ).fetchall()
+    for row in active_rows:
+        sid, uid = int(row['id']), int(row['user_id'])
+        if row['status'] == 'awaiting_quiz':
+            c.execute(
+                "UPDATE sessions SET status='running', remaining_seconds=1, start_time=? WHERE id=?",
+                (datetime.now().isoformat(), sid),
+            )
+            remaining = 1
+        else:
+            try:
+                started = datetime.fromisoformat(str(row['start_time']))
+                elapsed = max(0, int((datetime.now() - started).total_seconds()))
+            except (TypeError, ValueError):
+                elapsed = 0
+            remaining = max(1, int(row['remaining_seconds'] or int(row['planned_minutes'] or 1) * 60) - elapsed)
+        c.commit()
+        job_queue.run_once(
+            session_reminder,
+            remaining,
+            chat_id=uid,
+            data={'sid': sid},
+            name=f"session_reminder_{sid}",
+        )
+        job_queue.run_once(
+            nag_check,
+            remaining + 300,
+            chat_id=uid,
+            data={'sid': sid},
+            name=f"session_nag_{sid}",
+        )
+        log.info("Recovered active study session sid=%s user=%s remaining=%ss", sid, uid, remaining)
+    c.close()
 
 # ================== CHANNEL POST ==================
 async def channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
