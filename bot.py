@@ -628,6 +628,73 @@ def audit_admin(uid, action, details=''):
         c = db(); c.execute('INSERT INTO admin_audit(admin_id,action,details) VALUES(?,?,?)', (int(uid), str(action)[:120], str(details)[:1000])); c.commit(); c.close()
     except Exception:
         log.exception('Admin audit write failed')
+
+def throttled(uid, context, interval=0.7):
+    now = time.monotonic()
+    last = context.bot_data.setdefault('_throttle_last', {})
+    prev = last.get(int(uid), 0.0)
+    if now - prev < interval:
+        return True
+    last[int(uid)] = now
+    if len(last) > 10000:
+        cutoff = now - 60
+        context.bot_data['_throttle_last'] = {k:v for k,v in last.items() if v >= cutoff}
+    return False
+
+async def force_join_check(bot, uid):
+    c = db(); channels = c.execute('SELECT * FROM force_channels WHERE is_active=1 ORDER BY id').fetchall(); c.close()
+    missing = []
+    for ch in channels:
+        try:
+            member = await bot.get_chat_member(chat_id=ch['channel_id'], user_id=uid)
+            if member.status in ('left', 'kicked'):
+                url = ch['invite_link'] or (f"https://t.me/{ch['username'].lstrip('@')}" if ch['username'] else '')
+                if url: missing.append((ch['title'], url))
+        except Exception as exc:
+            # A bot removed from a channel must not crash or permanently block users.
+            log.warning('Force-join check skipped for channel %s: %s', ch['channel_id'], exc)
+            continue
+    return missing
+
+async def force_join_prompt(update, context, missing):
+    buttons = [[InlineKeyboardButton('📢 Join ' + title[:40], url=url)] for title, url in missing]
+    buttons.append([InlineKeyboardButton('✅ I Joined — Verify', callback_data='force_verify')])
+    await update.effective_message.reply_text('🔒 <b>Channel join required</b>\n\nPehle active channel(s) join karo, phir verify dabao.', parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(buttons))
+
+async def force_verify_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    q=update.callback_query
+    missing=await force_join_check(context.bot, q.from_user.id)
+    if missing:
+        await q.answer('Abhi kuch channel join nahi hua.', show_alert=True)
+        return
+    await q.answer('Verified!')
+    await q.edit_message_text('✅ Membership verified. Ab menu se continue karo.')
+
+async def forceadd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uid=update.effective_user.id
+    if not is_admin(uid): return
+    try:
+        parts=[x.strip() for x in update.message.text.split(' ',1)[1].split('|')]
+        if len(parts)!=4: raise ValueError('4 fields required')
+        channel_id,title,username,invite_link=parts
+        if not channel_id or not title or (username and not username.startswith('@')) or (invite_link and not invite_link.startswith('https://')): raise ValueError('invalid channel fields')
+        c=db(); c.execute('INSERT INTO force_channels(channel_id,title,username,invite_link,is_active) VALUES(?,?,?,?,1) ON CONFLICT(channel_id) DO UPDATE SET title=excluded.title, username=excluded.username, invite_link=excluded.invite_link, is_active=1', (channel_id,title[:100],username[:100],invite_link[:500])); c.commit(); c.close()
+        audit_admin(uid,'force_channel_add',channel_id)
+        await update.message.reply_text('✅ Force-join channel add/update ho gaya. Bot ko us channel ka admin/member access dena zaroori hai.')
+    except Exception as exc:
+        await update.message.reply_text('Format: /forceadd CHANNEL_ID | title | @username_or_blank | invite_link_or_blank\nExample: /forceadd -1001234567890 | Study Channel | @studychannel | https://t.me/studychannel')
+        log.exception('forceadd failed: %s',exc)
+
+async def forcedisable(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    uid=update.effective_user.id
+    if not is_admin(uid): return
+    try:
+        channel_id=int(context.args[0])
+        c=db(); c.execute('UPDATE force_channels SET is_active=0 WHERE id=?', (channel_id,)); changed=c.total_changes; c.commit(); c.close()
+        audit_admin(uid,'force_channel_disable',f'id={channel_id}')
+        await update.message.reply_text('✅ Channel disabled.' if changed else 'Channel ID nahi mila.')
+    except Exception:
+        await update.message.reply_text('Usage: /forcedisable ID (ID Force Join panel mein dikhega)')
 def get_user(uid): c = db(); r = c.execute("SELECT * FROM users WHERE user_id=?", (uid,)).fetchone(); c.close(); return dict(r) if r else None
 def create_user(uid, name): c = db(); c.execute("INSERT OR IGNORE INTO users(user_id,name) VALUES(?,?)", (uid, name)); c.commit(); c.close()
 def update_user(uid, **kw):
@@ -1380,6 +1447,8 @@ async def cancel_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def support_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
+    if throttled(q.from_user.id, context):
+        await q.answer('Thoda wait karo.', show_alert=False); return
     await q.answer()
     if q.data == 'support_new':
         context.user_data['awaiting'] = 'support_query'
@@ -1455,7 +1524,10 @@ async def admin_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("🛠️ <b>Admin Panel</b>", parse_mode=ParseMode.HTML, reply_markup=admin_menu_kb())
 
 async def admin_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer()
+    q = update.callback_query
+    if throttled(q.from_user.id, context):
+        await q.answer('Thoda wait karo.', show_alert=False); return
+    await q.answer()
     if not is_admin(q.from_user.id): await q.edit_message_text("❌ Not admin."); return
     d = q.data
     audit_admin(q.from_user.id, 'admin_callback', d)
@@ -1907,10 +1979,18 @@ async def channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def msg_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not update.message: return
     uid = update.effective_user.id
+    if throttled(uid, context):
+        return
     log.info("📩 Incoming Telegram message: user=%s type=%s text=%r", uid, "photo" if update.message.photo else "text", (update.message.text or update.message.caption or "")[:120])
     touch_user(uid); u = get_user(uid)
     if u and u.get('is_banned'): await update.message.reply_text("🚫 Banned."); return
     txt = (update.message.text or "").strip(); aw = context.user_data.get('awaiting')
+    # Do not block an in-progress support/admin flow, and keep help accessible.
+    if aw not in ('support_query','support_reply','join_fun','broadcast','daily_quiz') and txt not in ('❓ Help',):
+        missing = await force_join_check(context.bot, uid)
+        if missing:
+            await force_join_prompt(update, context, missing)
+            return
     if aw == 'support_query':
         query_text = (update.message.text or update.message.caption or '').strip()
         if not query_text:
@@ -2047,7 +2127,7 @@ def main():
     app.add_error_handler(bot_error_handler)
 
     for cmd, fn in [
-        ("start", start), ("app", app_cmd), ("help", help_cmd), ("admin", admin_cmd), ("support", support_cmd), ("cancel", cancel_cmd),
+        ("start", start), ("app", app_cmd), ("help", help_cmd), ("admin", admin_cmd), ("support", support_cmd), ("cancel", cancel_cmd), ("forceadd", forceadd), ("forcedisable", forcedisable),
         ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel),
         ("addq", addq), ("set", set_cmd), ("settime", settime_cmd),
         ("addadmin", addadmin), ("removeadmin", removeadmin), ("userinfo", userinfo),
@@ -2072,7 +2152,7 @@ def main():
         ("^sess_resume_", session_resume_cb), ("^sess_stop_", session_stop_cb),
         ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb),
         ("^dq_", daily_quiz_answer), ("^setm_", set_mode_cb),
-        ("^support_new$", support_callback), ("^ticket_(reply|close):\\d+$", support_callback),
+        ("^support_new$", support_callback), ("^ticket_(reply|close):\\d+$", support_callback), ("^force_verify$", force_verify_cb),
         ("^a_fj", fj_toggle), ("^a_", admin_cb)
     ]:
         app.add_handler(CallbackQueryHandler(fn, pattern=pat))
