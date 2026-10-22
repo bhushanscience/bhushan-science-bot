@@ -1320,17 +1320,18 @@ async def send_next_question(context, uid, sid):
     qs = context.user_data.get(f'qq_{sid}', []); i = context.user_data.get(f'qi_{sid}', 0)
     if i >= len(qs): await finish_session(context, uid, sid, len(qs), context.user_data.get(f'qc_{sid}', 0)); return
     q = qs[i]
-    btns = [[InlineKeyboardButton(f"{opt.upper()}) {q[f'option_{opt}']}", callback_data=f"ans_{sid}_{opt}")] for opt in ['a','b','c','d'] if q.get(f'option_{opt}')]
+    btns = [[InlineKeyboardButton(f"{opt.upper()}) {q[f'option_{opt}']}", callback_data=f"ans_{sid}_{i}_{opt}")] for opt in ['a','b','c','d'] if q.get(f'option_{opt}')]
     await context.bot.send_message(uid, f"<b>Q{i+1}.</b> {q['question']}", parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(btns))
 
 async def answer_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     q = update.callback_query
-    await q.answer()
     uid = q.from_user.id
     try:
-        _, raw_sid, chosen = q.data.split("_", 2)
+        _, raw_sid, raw_index, chosen = q.data.split("_", 3)
         sid = int(raw_sid)
+        question_index = int(raw_index)
     except (ValueError, TypeError):
+        await q.answer("Question data invalid hai.", show_alert=True)
         return
     user = get_user(uid)
     if not user or int(user.get('current_session') or 0) != sid:
@@ -1344,8 +1345,10 @@ async def answer_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     qs = context.user_data.get(f'qq_{sid}', [])
     i = context.user_data.get(f'qi_{sid}', 0)
-    if i >= len(qs):
+    if i >= len(qs) or question_index != i:
+        await q.answer("Is question ka answer already process ho chuka hai.", show_alert=True)
         return
+    await q.answer()
     correct = str(qs[i].get('correct_option', 'a')).strip().lower()
     expl = escape(str(qs[i].get('explanation') or ''))
     if chosen == correct:
