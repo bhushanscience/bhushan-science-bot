@@ -18,6 +18,7 @@ from telegram.constants import ParseMode
 from telegram.error import Conflict, InvalidToken
 from flask import Flask
 import pytz
+from instamart_offer import instamart_start, instamart_input, instamart_command
 
 # ================== CONFIG ==================
 BOT_TOKEN = (os.environ.get("BOT_TOKEN") or os.environ.get("TELEGRAM_BOT_TOKEN") or os.environ.get("TELEGRAM_TOKEN") or "").strip().strip('"').strip("'")
@@ -773,6 +774,7 @@ def main_menu_kb():
         [KeyboardButton("🎉 Join Fun"), KeyboardButton("🎯 Exam Countdown"), KeyboardButton("📅 Aaj ka Target")],
         [KeyboardButton("🏆 Points"), KeyboardButton("🏅 Leaderboard"), KeyboardButton("🎖️ Badges")],
         [KeyboardButton("🎭 Mode Badlo"), KeyboardButton("📊 Report")],
+        [KeyboardButton("🛒 Instamart Offer Checker")],
         [KeyboardButton("💭 Thought"), KeyboardButton("😂 Meme"), KeyboardButton("❓ Help")]
     ], resize_keyboard=True)
 
@@ -2129,6 +2131,12 @@ async def msg_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if missing:
             await force_join_prompt(update, context, missing)
             return
+    if aw and aw.startswith('instamart_'):
+        await instamart_input(update, context, txt, aw)
+        return
+    if txt == "🛒 Instamart Offer Checker":
+        await instamart_start(update, context)
+        return
     if aw == 'support_query':
         query_text = (update.message.text or update.message.caption or '').strip()
         if not query_text:
@@ -2265,7 +2273,7 @@ def main():
     app.add_error_handler(bot_error_handler)
 
     for cmd, fn in [
-        ("start", start), ("app", app_cmd), ("help", help_cmd), ("admin", admin_cmd), ("support", support_cmd), ("cancel", cancel_cmd), ("forceadd", forceadd), ("forcedisable", forcedisable),
+        ("start", start), ("app", app_cmd), ("help", help_cmd), ("admin", admin_cmd), ("support", support_cmd), ("cancel", cancel_cmd), ("instamart", instamart_command), ("forceadd", forceadd), ("forcedisable", forcedisable),
         ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel),
         ("addq", addq), ("set", set_cmd), ("settime", settime_cmd),
         ("addadmin", addadmin), ("removeadmin", removeadmin), ("userinfo", userinfo),
