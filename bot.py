@@ -2126,7 +2126,7 @@ async def msg_router(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if u and u.get('is_banned'): await update.message.reply_text("🚫 Banned."); return
     txt = (update.message.text or "").strip(); aw = context.user_data.get('awaiting')
     # Do not block an in-progress support/admin flow, and keep help accessible.
-    if aw not in ('support_query','support_reply','join_fun','broadcast','daily_quiz') and txt not in ('❓ Help',):
+    if aw not in ('support_query','support_reply','join_fun','broadcast','daily_quiz') and not (aw and aw.startswith('instamart_')) and txt not in ('❓ Help',):
         missing = await force_join_check(context.bot, uid)
         if missing:
             await force_join_prompt(update, context, missing)
