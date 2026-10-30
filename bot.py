@@ -418,11 +418,8 @@ async def class_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     touch_user(q.from_user.id)
     update_user(q.from_user.id, user_class="Other")
     context.user_data["onboarding_step"] = "subject"
-    context.user_data.pop("course", None)
-    context.user_data.pop("course_term", None)
-    context.user_data.pop("norcet_track", None)
     await q.edit_message_text(
-        "📚 <b>General Science</b>\\n\\n📖 Subject chuno:",
+        "📚 <b>General Science</b>\n\n📖 Subject chuno:",
         parse_mode=ParseMode.HTML,
         reply_markup=subject_selection_kb()
     )
