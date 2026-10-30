@@ -77,11 +77,8 @@ MODES = {
 }
 
 SMART_JOKES = [
-    "🧠 Smart joke: Nurse ne BP machine se kaha — “Tumhara pressure mujhe bhi pressure de raha hai!” 😄",
-    "🧠 Smart joke: Anatomy student ka favourite map? — “Body ka internal Google Maps.” 😂",
-    "🧠 Smart joke: Pharmacology student ne kaha — “Meri coffee ki dose PRN hai: jab tak jagta rahun.” ☕😄",
-    "🧠 Smart joke: Nursing student ka Wi‑Fi password? — “HandHygiene123”, kyunki infection control first! 🧼😂",
-    "🧠 Smart joke: Physiology ne poocha, “Heart ka kaam?” Student bola — “Beat drop karna.” ❤️😂",
+    "🧠 Smart joke: Physics student ka favourite music? — “Current hits!” ⚡😂",
+    "🧠 Smart joke: Chemistry student ka favourite relationship status? — “Strong bonds only.” 🧪😂",
 ]
 
 ROAST_LINES = [
@@ -112,267 +109,6 @@ async def send_style_media(context, uid, mode):
     except Exception:
         pass
 
-# ================== INDIAN NURSING / NORCET CURRICULUM ==================
-# Based on INC's Revised B.Sc. Nursing curriculum (2020) and Revised GNM
-# curriculum, which are the nursing-course syllabi relevant to NORCET eligibility.
-# NORCET itself tests the nursing-course syllabus at the candidate's essential
-# qualification level; it is not a separate INC syllabus. AIIMS also specifies
-# General Knowledge & Aptitude for Stage I and nursing-course syllabus for the
-# nursing portion.
-INC_BSC_SYLLABUS_URL = "https://indiannursingcouncil.org/uploads/pdf/162581803399632881260e803b133fde.pdf"
-# Evidence/source policy for medical and nursing content.
-AUTHENTIC_SOURCE_HIERARCHY = [
-    ("INC", "Nursing curriculum, competencies, syllabus and professional standards", "https://www.indiannursingcouncil.org/"),
-    ("AIIMS", "NORCET notifications, examination scheme and eligibility", "https://www.aiimsexams.ac.in/"),
-    ("MoHFW", "Government of India clinical/public-health programmes and guidance", "https://www.mohfw.gov.in/"),
-    ("WHO", "Evidence-based clinical/public-health guidelines and recommendations", "https://www.who.int/publications/who-guidelines"),
-    ("ICMR", "Indian biomedical/clinical research guidance and standards", "https://www.icmr.gov.in/"),
-    ("NCDC", "Indian communicable-disease/public-health guidance", "https://ncdc.mohfw.gov.in/"),
-    ("Standard textbooks/guidelines", "Established nursing/medical textbooks and current specialty guidelines", ""),
-]
-AUTHENTIC_CONTENT_RULES = [
-    "Do not invent clinical facts, drug doses, contraindications, diagnostic cut-offs or treatment recommendations.",
-    "Separate syllabus/index information from clinical management recommendations.",
-    "Prefer current Indian official guidance when applicable; use WHO/specialty guidance when appropriate.",
-    "If authoritative evidence is unavailable or conflicting, explicitly say that verification is required.",
-    "For patient-specific questions, provide educational information and advise qualified clinical assessment rather than diagnosing.",
-]
-
-INC_GNM_SYLLABUS_URL = "https://indiannursingcouncil.org/uploads/pdf/16777602713172325806400970f3f105.pdf"
-
-NORCET_BSC_SUBJECTS = [
-    "Communicative English", "Applied Anatomy", "Applied Physiology",
-    "Applied Sociology", "Applied Psychology", "Nursing Foundations I",
-    "Applied Biochemistry", "Applied Nutrition and Dietetics",
-    "Nursing Foundations II", "Health/Nursing Informatics & Technology",
-    "Applied Microbiology & Infection Control including Safety",
-    "Pharmacology I", "Pathology I",
-    "Adult Health (Medical-Surgical) Nursing I with Integrated Pathophysiology",
-    "Pharmacology II", "Pathology II & Genetics",
-    "Adult Health Nursing II with Integrated Pathophysiology including Geriatric Nursing",
-    "Professionalism, Professional Values & Ethics including Bioethics",
-    "Child Health Nursing I", "Mental Health Nursing I",
-    "Community Health Nursing I including Environmental Science & Epidemiology",
-    "Educational Technology / Nursing Education",
-    "Introduction to Forensic Nursing & Indian Laws", "Child Health Nursing II",
-    "Mental Health Nursing II", "Nursing Management & Leadership",
-    "Midwifery / Obstetrics & Gynecology Nursing I", "Community Health Nursing II",
-    "Nursing Research & Statistics", "Midwifery / Obstetrics & Gynecology Nursing II",
-    "Internship / Intensive Practicum / Residency Posting",
-    "Mandatory Modules: First Aid, BCLS, Health Assessment, Palliative Care, Essential Newborn Care (ENBC), FBNBC, IMNCI, PLS/PALS, Safe Delivery",
-]
-
-NORCET_GNM_SUBJECTS = [
-    "Bio-Science: Anatomy & Physiology", "Microbiology",
-    "Behavioural Sciences: Psychology & Sociology",
-    "Nursing Foundations / Fundamentals of Nursing", "First Aid",
-    "Community Health Nursing I", "Environmental Hygiene",
-    "Health Education & Communication Skills", "Nutrition", "English",
-    "Computer Education", "Medical-Surgical Nursing I",
-    "Medical-Surgical Nursing II", "Mental Health Nursing",
-    "Child Health Nursing", "Midwifery", "Gynaecological Nursing",
-    "Community Health Nursing II", "Nursing Education",
-    "Introduction to Research", "Professional Trends & Adjustment",
-    "Nursing Administration & Ward Management", "Clinical / Internship Training",
-]
-
-NORCET_SUBJECT_MAP = {}
-for _i, _s in enumerate(NORCET_BSC_SUBJECTS): NORCET_SUBJECT_MAP[f"B{_i}"] = _s
-for _i, _s in enumerate(NORCET_GNM_SUBJECTS): NORCET_SUBJECT_MAP[f"G{_i}"] = _s
-
-# ================== SUBJECT INDEX / HIGH-YIELD CONTENT ==================
-NORCET_INDEX_OVERRIDES = {
-    "Communicative English": ["Grammar & sentence structure","Tenses & subject-verb agreement","Articles, prepositions & conjunctions","Vocabulary, synonyms & antonyms","Comprehension","Medical terminology","Precis / communication","Common error spotting"],
-    "Applied Anatomy": ["Anatomical terminology & planes","Cells, tissues & membranes","Skeletal system & joints","Muscular system","Cardiovascular system","Respiratory system","Digestive system","Urinary system","Nervous system & special senses","Endocrine system","Reproductive system","Lymphatic system"],
-    "Applied Physiology": ["Cell physiology & homeostasis","Blood & immunity","Cardiac cycle & circulation","Respiratory physiology","GIT & digestion","Renal physiology & fluid balance","Nervous system","Endocrine physiology","Reproductive physiology","Temperature regulation & exercise"],
-    "Applied Sociology": ["Society & culture","Socialization","Family & marriage","Social groups","Social stratification","Community & social change","Health and illness in society","Indian social problems","Social determinants of health"],
-    "Applied Psychology": ["Introduction to psychology","Learning","Memory","Intelligence","Motivation & emotion","Personality","Developmental psychology","Stress & coping","Psychological assessment","Mental health basics"],
-    "Nursing Foundations I": ["Nursing profession & history","Nursing process","Basic needs & comfort","Admission, transfer & discharge","Vital signs","Hygiene & personal care","Bed making & positioning","Safety & mobility","Infection prevention","Documentation & reporting","Basic procedures & asepsis"],
-    "Applied Biochemistry": ["Carbohydrates","Proteins & amino acids","Lipids","Enzymes","Vitamins & minerals","Nucleic acids","Metabolism","Acid-base balance","Clinical biochemistry","Liver & renal function tests"],
-    "Applied Nutrition and Dietetics": ["Nutrients & energy","Balanced diet","Therapeutic diets","Malnutrition","Infant & child nutrition","Pregnancy & lactation nutrition","Enteral & parenteral nutrition","Diet planning","Food hygiene","Nutrition education"],
-    "Nursing Foundations II": ["Health assessment","Physical examination","Pain assessment","Medication basics","Fluid & electrolyte care","Oxygen therapy","Wound care","Specimen collection","Perioperative basics","Emergency nursing basics"],
-    "Health/Nursing Informatics & Technology": ["Health information systems","Electronic health records","Nursing documentation","Data privacy & security","Telehealth","Digital health tools","Evidence retrieval","Basic statistics/data handling","Technology in patient safety"],
-    "Applied Microbiology & Infection Control including Safety": ["Microorganisms","Bacteria, viruses, fungi & parasites","Chain of infection","Standard precautions","Hand hygiene","PPE","Sterilization & disinfection","Biomedical waste","Healthcare-associated infections","Isolation precautions","Needle-stick prevention"],
-    "Pharmacology I": ["General pharmacology","Pharmacokinetics & pharmacodynamics","Routes of administration","Adverse drug reactions","Drug interactions","Autonomic drugs","CNS drugs","Cardiovascular drugs","Respiratory drugs","GI drugs","Safe medication administration"],
-    "Pathology I": ["Cell injury","Inflammation","Healing & repair","Neoplasia","Hemodynamic disorders","Infectious disease pathology","Hematology basics","Laboratory diagnosis","Specimen handling"],
-    "Adult Health (Medical-Surgical) Nursing I with Integrated Pathophysiology": ["Health assessment of adults","Respiratory disorders","Cardiovascular disorders","GI & hepatobiliary disorders","Renal & urinary disorders","Neurological disorders","Endocrine disorders","Musculoskeletal disorders","Perioperative nursing","Emergency & critical care basics","Fluid/electrolyte management"],
-    "Pharmacology II": ["Antimicrobials","Endocrine drugs","Chemotherapy","Blood & coagulation drugs","Emergency drugs","Obstetric drugs","Paediatric considerations","Drug calculations","High-alert medications","Fundamentals of prescribing"],
-    "Pathology II & Genetics": ["Clinical pathology","Hematology","Immunopathology","Organ-system pathology","Genetic principles","Chromosomal disorders","Genetic counselling","Prenatal diagnosis","Laboratory interpretation"],
-    "Adult Health Nursing II with Integrated Pathophysiology including Geriatric Nursing": ["Oncology nursing","Neurological nursing","Renal nursing","Endocrine nursing","Musculoskeletal nursing","Burns & wounds","Geriatric assessment","Dementia & delirium","Palliative care","Rehabilitation","Long-term care"],
-    "Professionalism, Professional Values & Ethics including Bioethics": ["Professional identity","Nursing code of ethics","Patient rights","Confidentiality","Consent","Legal responsibilities","Ethical principles","Bioethics","Professional boundaries","Incident reporting"],
-    "Child Health Nursing I": ["Growth & development","Paediatric assessment","Newborn care","Nutrition in children","Immunization","Common childhood illnesses","Respiratory disorders","GI disorders","Fluid/electrolyte care","Family-centred care"],
-    "Mental Health Nursing I": ["Mental health concepts","Therapeutic communication","Mental status examination","Psychiatric history","Anxiety disorders","Mood disorders","Schizophrenia","Substance use","Suicide risk","Psychiatric emergencies"],
-    "Community Health Nursing I including Environmental Science & Epidemiology": ["Community assessment","Primary health care","Health promotion","Epidemiology","Screening","Communicable diseases","Environmental sanitation","Water & air pollution","Waste management","National health programmes"],
-    "Educational Technology / Nursing Education": ["Teaching-learning process","Learning theories","Lesson planning","Teaching methods","AV aids","Clinical teaching","Evaluation","Curriculum basics","Student guidance"],
-    "Introduction to Forensic Nursing & Indian Laws": ["Forensic nursing role","Medico-legal cases","Evidence preservation","Injury documentation","Consent & confidentiality","Death & dying","Sexual assault care","Poisoning basics","Indian legal framework","Court testimony"],
-    "Child Health Nursing II": ["Paediatric emergencies","Congenital disorders","Neurological disorders","Cardiac disorders","Renal disorders","Endocrine disorders","Oncology in children","Hematological disorders","Disability & rehabilitation","Paediatric critical care"],
-    "Mental Health Nursing II": ["Psychiatric therapies","Psychopharmacology","ECT","Behaviour therapy","Cognitive therapies","Child/adolescent psychiatry","Geriatric psychiatry","Community mental health","Rehabilitation","Psychiatric nursing care plans"],
-    "Nursing Management & Leadership": ["Management principles","Leadership styles","Staffing","Scheduling","Delegation","Supervision","Quality assurance","Nursing audit","Conflict management","Inventory management","Disaster management"],
-    "Midwifery / Obstetrics & Gynecology Nursing I": ["Reproductive anatomy","Antenatal care","Normal pregnancy","Labour & delivery","Partograph","Postnatal care","Newborn care","Breastfeeding","Family planning","Obstetric emergencies"],
-    "Community Health Nursing II": ["Community diagnosis","Family health nursing","Home visits","School health","Occupational health","National programmes","Maternal & child health","Epidemiological surveillance","Health education","Primary/secondary/tertiary care"],
-    "Nursing Research & Statistics": ["Research process","Research designs","Problem & objectives","Literature review","Sampling","Data collection","Validity & reliability","Descriptive statistics","Probability & tests","Research ethics"],
-    "Midwifery / Obstetrics and Gynecology (OBG) Nursing II": ["High-risk pregnancy","Hypertensive disorders","Diabetes in pregnancy","Obstetric haemorrhage","Abnormal labour","Operative obstetrics","Puerperal complications","Gynaecological disorders","Infertility","Family planning & reproductive health"],
-    "Midwifery / Obstetrics & Gynecology Nursing II": ["High-risk pregnancy","Hypertensive disorders","Diabetes in pregnancy","Obstetric haemorrhage","Abnormal labour","Operative obstetrics","Puerperal complications","Gynaecological disorders","Infertility","Family planning & reproductive health"],
-    "Internship / Intensive Practicum / Residency Posting": ["Clinical assessment","Medication safety","Infection control","Documentation","Patient education","Emergency response","Team communication","Care planning","Case presentation","Professional practice"],
-    "Mandatory Modules: First Aid, BCLS, Health Assessment, Palliative Care, Essential Newborn Care (ENBC), FBNBC, IMNCI, PLS/PALS, Safe Delivery": ["First Aid & emergency response","BCLS","Health assessment","Palliative care","Essential Newborn Care (ENBC)","Facility Based Newborn Care (FBNBC)","IMNCI","PLS/PALS concepts","Safe delivery practices"],
-    "Bio-Science: Anatomy & Physiology": ["Anatomical terminology","Cells & tissues","Skeletal & muscular systems","Cardiovascular system","Respiratory system","Digestive system","Urinary system","Nervous system","Endocrine system","Reproductive system"],
-    "Microbiology": ["Microorganisms","Bacteria","Viruses","Fungi","Parasites","Normal flora","Chain of infection","Specimen collection","Sterilization & disinfection","Infection prevention"],
-    "Behavioural Sciences: Psychology & Sociology": ["Psychology basics","Learning & memory","Personality","Motivation","Stress & coping","Society & culture","Family","Socialization","Social determinants of health"],
-    "Nursing Foundations / Fundamentals of Nursing": ["Nursing process","Vital signs","Hygiene","Bed making","Positioning","Asepsis","Infection control","Medication basics","Documentation","First aid"],
-    "First Aid": ["Primary survey","CPR/BLS basics","Bleeding & shock","Fractures","Burns","Poisoning","Choking","Seizures","Emergency transport","Disaster first response"],
-    "Community Health Nursing I": ["Community assessment","Primary health care","Health promotion","Family health","Communicable diseases","Maternal-child health","National programmes","Health education","Home visits"],
-    "Environmental Hygiene": ["Water sanitation","Air pollution","Waste disposal","Food hygiene","Housing","Vector control","Personal hygiene","Environmental health hazards"],
-    "Health Education & Communication Skills": ["Communication process","Therapeutic communication","Health education principles","Individual teaching","Group teaching","AV aids","Counselling","Barriers to communication"],
-    "Nutrition": ["Nutrients","Balanced diet","Deficiency diseases","Therapeutic diets","Infant nutrition","Pregnancy nutrition","Food hygiene","Meal planning"],
-    "English": ["Grammar","Tenses","Vocabulary","Comprehension","Sentence correction","Synonyms & antonyms","Medical terminology","Communication"],
-    "Computer Education": ["Computer basics","Operating systems","Word processing","Spreadsheets","Presentations","Internet & email","Health information systems","Data safety"],
-    "Medical-Surgical Nursing I": ["Assessment","Respiratory disorders","Cardiovascular disorders","GI disorders","Renal disorders","Neurological disorders","Endocrine disorders","Infection care","Perioperative care"],
-    "Medical-Surgical Nursing II": ["Oncology","Neurology","Renal","Endocrine","Musculoskeletal","Burns","Geriatric nursing","Critical care","Rehabilitation","Palliative care"],
-    "Mental Health Nursing": ["Mental health concepts","Therapeutic communication","MSE","Schizophrenia","Mood disorders","Anxiety","Substance use","Suicide prevention","Psychiatric emergencies"],
-    "Child Health Nursing": ["Growth & development","Newborn care","Immunization","Common childhood diseases","Nutrition","Paediatric emergencies","Congenital disorders","Family-centred care"],
-    "Midwifery": ["Pregnancy","Antenatal care","Labour","Partograph","Delivery","Postnatal care","Newborn care","Breastfeeding","Obstetric emergencies"],
-    "Gynaecological Nursing": ["Menstrual disorders","Reproductive tract infections","Infertility","Benign gynaecological disorders","Gynaecological cancers","Contraception","Menopause","Perioperative care"],
-    "Community Health Nursing II": ["Community diagnosis","Family health","Home visits","School health","Occupational health","National programmes","MCH","Surveillance","Health education"],
-    "Nursing Education": ["Teaching-learning","Lesson plan","Teaching methods","AV aids","Clinical teaching","Evaluation","Curriculum"],
-    "Introduction to Research": ["Research problem","Objectives","Literature review","Research designs","Sampling","Data collection","Analysis","Research ethics"],
-    "Professional Trends & Adjustment": ["Professional roles","Ethics","Registration","Career development","Stress management","Teamwork","Professional adjustment"],
-    "Nursing Administration & Ward Management": ["Ward organization","Staffing","Scheduling","Delegation","Supervision","Records","Inventory","Quality assurance","Leadership"],
-    "Clinical / Internship Training": ["Patient assessment","Nursing care plans","Medication safety","Infection control","Documentation","Emergency care","Patient education","Teamwork","Professional conduct"],
-}
-def norcet_subject_index(subject):
-    if subject in NORCET_INDEX_OVERRIDES: return NORCET_INDEX_OVERRIDES[subject]
-    s = subject.lower()
-    for key, topics in NORCET_INDEX_OVERRIDES.items():
-        if key.lower() in s or s in key.lower(): return topics
-    return ["Core concepts","Definitions & terminology","Assessment","Pathophysiology / principles","Nursing management","Patient safety","Common complications","Emergency care","Prevention & health education","NORCET high-yield revision"]
-
-def norcet_topic_kb(code):
-    subject = NORCET_SUBJECT_MAP.get(code, "General Nursing")
-    topics = norcet_subject_index(subject)
-    rows, row = [], []
-    for i, topic in enumerate(topics):
-        label = f"📖 {i+1}. {topic}"
-        row.append(InlineKeyboardButton(label[:55], callback_data=f"ntopic_{code}_{i}"))
-        if len(row) == 1:
-            rows.append(row); row = []
-    if row: rows.append(row)
-    rows.append([InlineKeyboardButton("▶️ Start Study Session", callback_data=f"nstart_{code}")])
-    rows.append([InlineKeyboardButton("🔙 Subject List", callback_data=f"nback_{code[:1]}")])
-    return InlineKeyboardMarkup(rows)
-
-DETAILED_TOPIC_CONTENT = {
-    "abnormal labour": {
-        "gif": "https://tenor.com/n0aozzNlOo2.gif",
-        "source": "WHO — Intrapartum care + WHO Labour Care Guide",
-        "source_url": "https://www.who.int/publications/i/item/9789240017566",
-        "sections": [
-            ("1️⃣ Definition / Introduction", "Abnormal labour means labour with abnormal progress or a maternal/fetal problem requiring closer assessment and, when indicated, intervention. It should not be judged only by a fixed cervical-dilatation rate."),
-            ("2️⃣ Causes / Etiology / Risk factors", "🧠 Remember the 3 Ps: Power = uterine contractions; Passenger = fetal size, presentation and position; Passage = maternal pelvis/birth canal. Other contributors include malposition, malpresentation, cephalopelvic disproportion, uterine dysfunction, maternal exhaustion and dehydration."),
-            ("3️⃣ Pathophysiology / Pathogenesis", "⚙️ A problem with contractions, fetal factors or the birth canal can reduce cervical change or fetal descent. Persistent obstruction or difficult labour can increase maternal exhaustion, infection, trauma and fetal compromise."),
-            ("4️⃣ Signs & Symptoms / Clinical features", "🔎 Possible findings: slow/arrested cervical change, poor descent, prolonged labour, abnormal contraction pattern, maternal exhaustion/dehydration, fever or tachycardia, bleeding, and abnormal fetal heart-rate findings. Always interpret the whole clinical picture."),
-            ("5️⃣ Diagnosis / Diagnostic techniques", "🩺 Assess maternal vital signs, contraction frequency/duration/strength, cervical findings, presentation, position, station/descent, membrane status, bleeding and fetal heart rate. 📋 Use the locally adopted evidence-based labour monitoring tool; WHO's Labour Care Guide supports structured monitoring."),
-            ("6️⃣ Medical management", "💧 Supportive care may include appropriate fluids/food according to protocol, analgesia, bladder care, maternal-fetal monitoring, correction of reversible factors and timely obstetric review. Any augmentation/induction should have a clear indication and follow the applicable protocol."),
-            ("7️⃣ Surgical / Obstetric management", "🚑 If there is obstruction, fetal compromise, or another obstetric indication, assisted vaginal birth or caesarean birth may be required. The choice depends on cervical dilatation, station, presentation, fetal status and maternal condition."),
-            ("8️⃣ Pharmacological management", "💊 Medicines are indication- and protocol-dependent. Oxytocin may be used for selected indications under appropriate obstetric supervision and monitoring. Analgesic/anesthetic choices depend on the clinical situation. Never self-administer or independently titrate labour medicines."),
-            ("9️⃣ Nursing management", "👩‍⚕️ Baseline maternal/fetal assessment → monitor vitals, contractions and fetal heart rate → document labour progress → support hydration, bladder care, comfort and position → maintain infection prevention → provide emotional support → escalate deterioration immediately."),
-            ("🔟 Lifestyle / Diet / Prevention", "🥤 Follow facility protocol for oral fluids/food, mobility, position and pain relief. Prevention focuses on good antenatal risk assessment, skilled intrapartum monitoring, early recognition of complications and timely referral—not forcing labour to fit one fixed rate."),
-            ("1️⃣1️⃣ Nursing Care Plan", "📝 Assessment: pain, fatigue, hydration, contractions, fetal status and labour progress. Diagnosis may include acute pain, anxiety, fatigue, deficient-fluid-volume risk or knowledge deficit as appropriate. 🎯 Goals: maternal comfort, stable maternal-fetal status and timely escalation. 🔁 Reassess continuously."),
-            ("1️⃣2️⃣ Nurse Responsibility", "📋 Accurate documentation • 💊 medication-safety checks • 🧼 infection prevention • 📞 structured handover • 🫶 privacy/dignity • 🚨 early escalation • 🏥 preparation for emergency intervention when indicated."),
-            ("1️⃣3️⃣ Complications / Red flags", "🚨 Maternal: heavy bleeding, shock signs, fever/sepsis features, severe/worsening pain, dehydration or exhaustion. 🚨 Fetal: abnormal fetal heart-rate pattern or other evidence of fetal compromise. Obstructed/prolonged labour can increase maternal and fetal risks and may require urgent obstetric management."),
-            ("1️⃣4️⃣ NORCET High-Yield / Case Scenario", "🎯 3 Ps = Power–Passenger–Passage. ❤️ First priority in a deteriorating labouring woman is maternal + fetal assessment and escalation. 📌 Do not use the old 1 cm/hour rule alone as an automatic indication for intervention; WHO notes labour progress varies between women.")
-        ]
-    }
-}
-
-def norcet_topic_info(subject, topic):
-    detailed = DETAILED_TOPIC_CONTENT.get(topic.strip().lower())
-    if detailed:
-        txt = f"<b>📖 TOPIC — {escape(topic)}</b>\n\n📚 <b>Subject:</b> {escape(subject)}\n🩺 <b>Detailed Clinical Notes</b>\n\n"
-        txt += "\n\n".join(f"<b>{escape(h)}</b>\n{escape(v)}" for h, v in detailed["sections"])
-        txt += "\n\n🎯 <b>QUICK REVISION</b>\n🧠 3 Ps → Power • Passenger • Passage\n❤️ Correlate maternal + fetal status with labour progress.\n🚨 Red flags → assess, escalate and document promptly."
-        txt += f"\n\n📚 <b>AUTHENTIC SOURCE</b>\n🌐 {escape(detailed['source'])}\n🔗 {escape(detailed['source_url'])}"
-        txt += "\n⚠️ Educational content; patient-specific management follows the treating team's/local protocol."
-        return txt
-
-    clinical = any(x in subject.lower() for x in [
-        "nursing", "pathology", "pharmacology", "microbiology", "anatomy",
-        "physiology", "midwifery", "gynaec", "health", "first aid",
-        "nutrition", "mental", "child", "community", "biochemistry",
-        "forensic", "clinical", "geriatric"
-    ])
-    if clinical:
-        framework = [
-            ("1️⃣ Definition / Introduction", f"{topic}: topic-specific verified notes are being expanded."),
-            ("2️⃣ Causes / Etiology / Risk factors", "Only source-verified causes and risk factors should be presented."),
-            ("3️⃣ Pathophysiology / Pathogenesis", "Verified mechanism and clinically relevant links."),
-            ("4️⃣ Signs & Symptoms / Clinical features", "Verified clinical findings and red flags."),
-            ("5️⃣ Diagnosis / Diagnostic techniques", "Verified assessment, investigations and interpretation."),
-            ("6️⃣ Medical management", "Evidence-based management according to indication and current protocol."),
-            ("7️⃣ Surgical management", "Indications, preparation and postoperative nursing where applicable."),
-            ("8️⃣ Pharmacological management", "Verified drug classes, indications, precautions and safety points."),
-            ("9️⃣ Nursing management", "Assessment, monitoring, interventions, education and escalation."),
-            ("🔟 Lifestyle / Diet / Prevention", "Relevant prevention, education and supportive-care measures."),
-            ("1️⃣1️⃣ Nursing Care Plan", "Assessment → Nursing Diagnosis → Goals → Interventions → Rationale → Evaluation."),
-            ("1️⃣2️⃣ Nurse Responsibility", "Monitoring, documentation, communication, safety and escalation."),
-            ("1️⃣3️⃣ Complications / Red flags", "Verified complications and danger signs."),
-            ("1️⃣4️⃣ NORCET High-Yield / Case Scenario", "Priority action, safety, common traps and case-based revision.")
-        ]
-    else:
-        framework = [
-            ("1️⃣ Definition / Introduction", f"{topic}: concept, scope and terminology."),
-            ("2️⃣ Core principles / Classification", "Important classifications and principles."),
-            ("3️⃣ Process / Mechanism", "Step-by-step process or mechanism."),
-            ("4️⃣ Important features", "Key characteristics and examples."),
-            ("5️⃣ Assessment / Evaluation", "Methods, tools and interpretation."),
-            ("6️⃣ Application / Management", "Practical application and problem-solving."),
-            ("7️⃣ Safety / Legal / Ethical points", "Relevant safety and professional points."),
-            ("8️⃣ Nursing application", "Clinical/educational/community application."),
-            ("9️⃣ Patient / Community Education", "Communication, counselling and prevention."),
-            ("🔟 Nursing Care Plan", "Assessment → Nursing Diagnosis → Goals → Interventions → Rationale → Evaluation."),
-            ("1️⃣1️⃣ Nurse Responsibility", "Monitoring, documentation and education."),
-            ("1️⃣2️⃣ NORCET High-Yield", "Definitions, differences and case-based points.")
-        ]
-    txt = f"<b>📖 TOPIC</b>\n<b>{escape(topic)}</b>\n\n📚 <b>Subject:</b> {escape(subject)}\n\n"
-    txt += "\n\n".join(f"<b>{escape(h)}</b>\n{escape(v)}" for h,v in framework)
-    txt += "\n\n🎯 <b>QUICK REVISION</b>\n🧠 Definition → mechanism → assessment → management → nursing priority"
-    txt += "\n\n📚 <b>AUTHENTIC SOURCE STANDARD</b>\n🏥 INC • AIIMS • MoHFW • ICMR • NCDC • WHO • recognised guidelines/textbooks"
-    return txt
-
-def norcet_subject_info(subject):
-    topics = norcet_subject_index(subject)
-    index_text = "\n".join(f"{i+1}. {escape(x)}" for i, x in enumerate(topics))
-    return (
-        f"<b>📚 {escape(subject)}</b>\n\n"
-        "<b>⭐ Important Topics — ek topic select karo:</b>\n\n"
-        f"{index_text}\n\n"
-        "👇 Neeche topic button se complete topic framework kholo."
-    )
-
-def norcet_subject_info_kb(code):
-    return norcet_topic_kb(code)
-
-
-def norcet_track_kb():
-    return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎓 INC B.Sc Nursing 2020", callback_data="ntrack_B")],
-        [InlineKeyboardButton("🏥 INC GNM 3-Year", callback_data="ntrack_G")],
-        [InlineKeyboardButton("📜 INC B.Sc Official Syllabus", url=INC_BSC_SYLLABUS_URL)],
-        [InlineKeyboardButton("📜 INC GNM Official Syllabus", url=INC_GNM_SYLLABUS_URL)],
-    ])
-
-
-def norcet_subject_kb(track):
-    prefix = "B" if track == "B" else "G"
-    subjects = NORCET_BSC_SUBJECTS if track == "B" else NORCET_GNM_SUBJECTS
-    rows, row = [], []
-    for i, subject in enumerate(subjects):
-        label = f"📚 {i+1}. {subject[:34]}"
-        row.append(InlineKeyboardButton(label[:55], callback_data=f"subn_{prefix}{i}"))
-        if len(row) == 2:
-            rows.append(row); row = []
-    if row: rows.append(row)
-    return InlineKeyboardMarkup(rows)
-
 # ================== BADGES ==================
 BADGES = {
     "first_session": {"name": "🥇 First Session", "desc": "Pehli padhai"},
@@ -385,201 +121,6 @@ BADGES = {
     "centurion": {"name": "⚡ Centurion", "desc": "100 sessions"},
     "technique_master": {"name": "🎓 Technique Master", "desc": "Saari techniques"},
 }
-
-# ================== COURSE CURRICULUM ==================
-COURSE_SYLLABUS_URLS = {
-    "BSC": INC_BSC_SYLLABUS_URL,
-    "GNM": "https://indiannursingcouncil.org/publications",
-}
-
-COURSE_CURRICULUM = {
-    "BSC": {
-        1: ["Communicative English","Applied Anatomy","Applied Physiology","Applied Sociology","Applied Psychology","Nursing Foundations I"],
-        2: ["Applied Biochemistry","Applied Nutrition and Dietetics","Nursing Foundations II","Health/Nursing Informatics & Technology"],
-        3: ["Applied Microbiology & Infection Control including Safety","Pharmacology I","Pathology I","Adult Health (Medical-Surgical) Nursing I with Integrated Pathophysiology"],
-        4: ["Pharmacology II","Pathology II & Genetics","Adult Health Nursing II with Integrated Pathophysiology including Geriatric Nursing","Professionalism, Professional Values & Ethics including Bioethics"],
-        5: ["Child Health Nursing I","Mental Health Nursing I","Community Health Nursing I including Environmental Science & Epidemiology","Educational Technology / Nursing Education","Introduction to Forensic Nursing & Indian Laws"],
-        6: ["Child Health Nursing II","Mental Health Nursing II","Nursing Management & Leadership","Midwifery / Obstetrics & Gynecology Nursing I"],
-        7: ["Community Health Nursing II","Nursing Research & Statistics","Midwifery / Obstetrics & Gynecology Nursing II"],
-        8: ["Internship — Community Health Nursing (4 weeks)","Internship — Adult Health Nursing (6 weeks)","Internship — Child Health Nursing (4 weeks)","Internship — Mental Health Nursing (4 weeks)","Internship — Midwifery (4 weeks)"],
-    },
-    "GNM": {
-        1: ["Bio-Science: Anatomy & Physiology","Microbiology","Behavioural Sciences: Psychology & Sociology","Nursing Foundations / Fundamentals of Nursing","First Aid","Community Health Nursing I","Environmental Hygiene","Health Education & Communication Skills","Nutrition","English","Computer Education"],
-        2: ["Medical-Surgical Nursing I","Medical-Surgical Nursing II","Mental Health Nursing","Child Health Nursing"],
-        3: ["Midwifery & Gynaecological Nursing","Community Health Nursing II","Nursing Education","Introduction to Research","Statistics","Professional Trends & Adjustment","Nursing Administration & Ward Management","Clinical / Internship Training"],
-    },
-}
-
-def course_label(course):
-    return "B.Sc Nursing (INC 2020)" if course == "BSC" else "GNM Nursing (INC 2015)"
-
-def course_term_label(course, term):
-    return f"Semester {term}" if course == "BSC" else f"Year {term}"
-
-def course_terms_kb(course):
-    max_term = 8 if course == "BSC" else 3
-    rows, row = [], []
-    for i in range(1, max_term + 1):
-        row.append(InlineKeyboardButton(f"📚 {course_term_label(course, i)}", callback_data=f"cterm_{course}_{i}"))
-        if len(row) == 2: rows.append(row); row = []
-    if row: rows.append(row)
-    rows.append([InlineKeyboardButton("📜 Full INC Syllabus", url=COURSE_SYLLABUS_URLS[course])])
-    return InlineKeyboardMarkup(rows)
-
-def course_subject_kb(course, term):
-    subjects = COURSE_CURRICULUM[course][term]
-    rows = []
-    for i, subject in enumerate(subjects):
-        rows.append([InlineKeyboardButton(f"📖 {i+1}. {subject[:34]}", callback_data=f"csub_{course}_{term}_{i}")])
-    rows.append([InlineKeyboardButton("📜 Full INC Syllabus", url=COURSE_SYLLABUS_URLS[course])])
-    rows.append([InlineKeyboardButton("🔙 Semesters/Years", callback_data=f"cback_{course}")])
-    return InlineKeyboardMarkup(rows)
-
-def course_topic_kb(course, term, subject_index, subject):
-    topics = norcet_subject_index(subject)
-    rows = [[InlineKeyboardButton(f"🧠 {i+1}. {topic[:48]}", callback_data=f"ctopic_{course}_{term}_{subject_index}_{i}")] for i, topic in enumerate(topics)]
-    rows.append([InlineKeyboardButton("🎭 Technique + Timer", callback_data=f"cstart_{course}_{term}_{subject_index}")])
-    rows.append([InlineKeyboardButton("📜 Full INC Syllabus", url=COURSE_SYLLABUS_URLS[course])])
-    rows.append([InlineKeyboardButton("🔙 Subjects", callback_data=f"csubback_{course}_{term}")])
-    return InlineKeyboardMarkup(rows)
-
-async def course_term_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
-    _, course, term_s = q.data.split("_"); term = int(term_s)
-    context.user_data.update(course=course, course_term=term)
-    await q.edit_message_text(f"📚 <b>{escape(course_label(course))}</b>\n\n<b>{escape(course_term_label(course, term))}</b> — subject choose karo:", parse_mode=ParseMode.HTML, reply_markup=course_subject_kb(course, term))
-
-async def course_subject_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
-    _, course, term_s, idx_s = q.data.split("_"); term, idx = int(term_s), int(idx_s)
-    subjects = COURSE_CURRICULUM.get(course, {}).get(term, [])
-    if idx < 0 or idx >= len(subjects): await q.answer("Subject unavailable.", show_alert=True); return
-    subject = subjects[idx]
-    context.user_data.update(course=course, course_term=term, course_subject_index=idx, subject=subject)
-    topics = norcet_subject_index(subject)
-    await q.edit_message_text(f"📖 <b>{escape(subject)}</b>\n\n<b>{len(topics)} topic areas</b> available.\nHar topic ko open karke detailed notes dekho:", parse_mode=ParseMode.HTML, reply_markup=course_topic_kb(course, term, idx, subject))
-
-async def course_topic_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
-    _, course, term_s, subj_s, topic_s = q.data.split("_"); term, subj_idx, topic_idx = int(term_s), int(subj_s), int(topic_s)
-    subjects = COURSE_CURRICULUM.get(course, {}).get(term, [])
-    if subj_idx >= len(subjects): await q.answer("Subject unavailable.", show_alert=True); return
-    subject = subjects[subj_idx]; topics = norcet_subject_index(subject)
-    if topic_idx >= len(topics): await q.answer("Topic unavailable.", show_alert=True); return
-    topic = topics[topic_idx]
-    context.user_data.update(course=course, course_term=term, course_subject_index=subj_idx, subject=subject)
-    detailed = DETAILED_TOPIC_CONTENT.get(topic.strip().lower())
-    if detailed:
-        try: await q.message.reply_animation(detailed["gif"], caption="🎬🩺 Visual revision — ab notes focus se padho! 📚✨")
-        except Exception: pass
-    body = await detailed_topic_info(subject, topic)
-    header = f"📖 {course_term_label(course, term)}\n📚 {subject}\n🧠 {topic}\n\n"
-    full_text = header + body
-    chunks = [full_text[i:i+3800] for i in range(0, len(full_text), 3800)] or [header]
-    await q.edit_message_text(chunks[0])
-    for chunk in chunks[1:]:
-        await q.message.reply_text(chunk)
-    await q.message.reply_text(
-        "👇 <b>Next step choose karo:</b>",
-        parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("📝 Optional Question Practice", callback_data=f"cpractice_{course}_{term}_{subj_idx}_{topic_idx}")],
-            [InlineKeyboardButton("🔙 Topic List", callback_data=f"csub_{course}_{term}_{subj_idx}")],
-            [InlineKeyboardButton("🎭 Technique + Timer", callback_data=f"cstart_{course}_{term}_{subj_idx}")],
-            [InlineKeyboardButton("📜 Full INC Syllabus", url=COURSE_SYLLABUS_URLS[course])],
-        ])
-    )
-
-async def ai_topic_quiz(subject, topic, count=5):
-    if not OPENAI_API_KEY: return None
-    prompt = f'''Create {count} high-quality MCQs for a nursing student studying this exact topic.
-Subject: {subject}
-Topic: {topic}
-Return ONLY valid JSON as an array. Each item must have question, options (object with a,b,c,d), correct_option (a/b/c/d), explanation.
-Questions must be syllabus-aligned, clinically safe and suitable for B.Sc Nursing/GNM/NORCET. No patient-specific treatment or drug doses. No markdown.'''
-    payload={"model":OPENAI_VISION_MODEL,"messages":[
-        {"role":"system","content":"Accurate nursing exam question setter. Output only valid JSON."},
-        {"role":"user","content":prompt}],"temperature":0.2,"max_tokens":3500}
-    def call():
-        req=Request("https://api.openai.com/v1/chat/completions",data=json.dumps(payload).encode(),headers={"Authorization":"Bearer "+OPENAI_API_KEY,"Content-Type":"application/json"},method="POST")
-        with urlopen(req,timeout=90) as resp: return json.loads(resp.read().decode())
-    try:
-        raw=(await asyncio.to_thread(call))["choices"][0]["message"]["content"].strip()
-        if raw.startswith("```"):
-            raw=raw.split("```",2)[1]
-            if raw.lstrip().startswith("json"): raw=raw.lstrip()[4:]
-        items=json.loads(raw); valid=[]
-        for item in items:
-            opts=item.get("options",{}); cor=str(item.get("correct_option","")).lower()
-            if item.get("question") and all(opts.get(x) for x in "abcd") and cor in "abcd":
-                valid.append({"question":item["question"],"option_a":opts["a"],"option_b":opts["b"],"option_c":opts["c"],"option_d":opts["d"],"correct_option":cor,"explanation":item.get("explanation","")})
-        return valid[:count] or None
-    except Exception as e:
-        log.exception("Topic quiz generation failed: %s",e); return None
-
-async def course_practice_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q=update.callback_query; await q.answer(); touch_user(q.from_user.id)
-    _,course,term_s,subj_s,topic_s=q.data.split("_"); term,subj_idx,topic_idx=int(term_s),int(subj_s),int(topic_s)
-    subjects=COURSE_CURRICULUM.get(course,{}).get(term,[])
-    if subj_idx>=len(subjects): await q.answer("Subject unavailable.",show_alert=True); return
-    subject=subjects[subj_idx]; topics=norcet_subject_index(subject)
-    if topic_idx>=len(topics): await q.answer("Topic unavailable.",show_alert=True); return
-    topic=topics[topic_idx]; key=f"{course}_{term}_{subj_idx}_{topic_idx}"
-    c=db(); rows=c.execute("""SELECT * FROM questions WHERE lower(subject)=lower(?) AND lower(topic)=lower(?) AND upper(COALESCE(source,''))='PYQ' ORDER BY RANDOM() LIMIT 5""",(subject,topic)).fetchall(); c.close()
-    quiz=[dict(r) for r in rows] if rows else None
-    if not quiz:
-        await q.edit_message_text("⚠️ Is topic ke liye verified PYQ available nahi hai.\n\nAI-generated question ko PYQ ke naam se nahi dikhaya jayega.",reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Topic",callback_data=f"ctopic_{course}_{term}_{subj_idx}_{topic_idx}")]])); return
-    context.user_data[f"tq_{key}"]=quiz; context.user_data[f"tqi_{key}"]=0; context.user_data[f"tqc_{key}"]=0
-    await q.edit_message_text(f"📝 <b>Optional Topic Practice</b>\n\n📚 {escape(subject)}\n🧠 {escape(topic)}\n\n5 MCQs — answer choose karo. Har answer ke baad <b>Right/Wrong + explanation</b> milega.",parse_mode=ParseMode.HTML)
-    await send_topic_question(context,q.from_user.id,key)
-
-async def send_topic_question(context,uid,key):
-    quiz=context.user_data.get(f"tq_{key}",[]); i=context.user_data.get(f"tqi_{key}",0)
-    if i>=len(quiz):
-        score=context.user_data.get(f"tqc_{key}",0)
-        await context.bot.send_message(uid,f"🏁 <b>Practice complete!</b>\n\n✅ Score: <b>{score}/{len(quiz)}</b>",parse_mode=ParseMode.HTML,reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Topic",callback_data=f"ctopic_{key.split('_')[0]}_{key.split('_')[1]}_{key.split('_')[2]}_{key.split('_')[3]}")]])); return
-    item=quiz[i]
-    btns=[[InlineKeyboardButton(f"{x.upper()}) {item[f'option_{x}']}",callback_data=f"tqa_{key}_{i}_{x}")] for x in "abcd"]
-    await context.bot.send_message(uid,f"📝 <b>Q{i+1}/{len(quiz)}</b>\n\n{escape(item['question'])}",parse_mode=ParseMode.HTML,reply_markup=InlineKeyboardMarkup(btns))
-
-async def topic_answer_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q=update.callback_query; await q.answer(); parts=q.data.split("_")
-    if len(parts)!=7: return
-    _,course,term_s,subj_s,topic_s,i_s,chosen=parts; key=f"{course}_{term_s}_{subj_s}_{topic_s}"
-    quiz=context.user_data.get(f"tq_{key}",[]); i=int(i_s)
-    if i>=len(quiz): return
-    item=quiz[i]; correct=item.get("correct_option","a").lower()
-    if chosen==correct:
-        context.user_data[f"tqc_{key}"]=context.user_data.get(f"tqc_{key}",0)+1
-        text=f"✅ <b>RIGHT!</b> 🎉\n\nCorrect: <b>{correct.upper()}) {escape(item[f'option_{correct}'])}</b>\n\n📖 {escape(item.get('explanation','Good job!'))}"
-    else:
-        text=f"❌ <b>WRONG!</b>\n\nYour answer: <b>{chosen.upper()}) {escape(item[f'option_{chosen}'])}</b>\nCorrect: <b>{correct.upper()}) {escape(item[f'option_{correct}'])}</b>\n\n📖 {escape(item.get('explanation','Review this concept once more.'))}"
-    await q.edit_message_text(text,parse_mode=ParseMode.HTML); context.user_data[f"tqi_{key}"]=i+1; await asyncio.sleep(1.2); await send_topic_question(context,q.from_user.id,key)
-
-async def course_start_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
-    _, course, term_s, idx_s = q.data.split("_"); term, idx = int(term_s), int(idx_s)
-    subjects = COURSE_CURRICULUM.get(course, {}).get(term, [])
-    if idx >= len(subjects): await q.answer("Subject unavailable.", show_alert=True); return
-    subject = subjects[idx]
-    context.user_data.update(course=course, course_term=term, course_subject_index=idx, subject=subject)
-    await q.edit_message_text(f"🎭 <b>Technique choose karo</b>\n\n📚 {escape(subject)}\n\nTechnique choose karte hi default timer <b>start ho jayega</b>.\nComplete = +5 points • Incomplete = -7 points.", parse_mode=ParseMode.HTML, reply_markup=technique_selection_kb())
-
-async def course_back_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer()
-    course = q.data.replace("cback_", "")
-    await q.edit_message_text(f"📚 <b>{escape(course_label(course))}</b>\n\nSemester/Year choose karo:", parse_mode=ParseMode.HTML, reply_markup=course_terms_kb(course))
-
-async def course_subback_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer()
-    _, course, term_s = q.data.split("_"); term = int(term_s)
-    await q.edit_message_text(f"📚 <b>{escape(course_term_label(course, term))}</b>\n\nSubject choose karo:", parse_mode=ParseMode.HTML, reply_markup=course_subject_kb(course, term))
-
-async def detailed_topic_info(subject, topic):
-    if OPENAI_API_KEY:
-        answer = await ai_doubt_answer(None, f"Create detailed study notes for '{topic}' in '{subject}'. Include definition, key concepts, classification, causes/risk factors where relevant, pathophysiology/principles, signs/features where relevant, assessment/investigations, management, nursing management, procedure/technique points, patient education, complications/red flags, nurse responsibilities and NORCET high-yield revision. Keep it educational and source-conscious; do not invent drug doses or patient-specific treatment.")
-        if answer: return answer
-    return norcet_topic_info(subject, topic)
 
 # ================== DATABASE ==================
 def init_db():
@@ -746,9 +287,7 @@ async def force_join_message(update, context):
 # ================== KEYBOARDS ==================
 def class_selection_kb():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🎓 B.Sc Nursing", callback_data="cls_BSC"), InlineKeyboardButton("🏥 GNM Nursing", callback_data="cls_GNM")],
-        [InlineKeyboardButton("🩺 NORCET", callback_data="cls_NORCET")],
-        [InlineKeyboardButton("📚 Other / General Science", callback_data="cls_Other")]
+        [InlineKeyboardButton("📚 General Science", callback_data="cls_Other")]
     ])
 
 def subject_selection_kb():
@@ -822,7 +361,7 @@ async def app_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     await update.message.reply_text(
         "🚀 <b>Bhushan Science App</b>\n\n"
-        "🧠 Smart learning • 📝 Practice • 🎯 NORCET • 🤖 AI Doubt • 🏆 Progress\n\n"
+        "🧠 Smart learning • 📝 Practice • 🤖 AI Doubt • 🏆 Progress\n\n"
         "👇 Telegram ke andar app kholo!",
         parse_mode=ParseMode.HTML,
         reply_markup=app_launch_kb(),
@@ -855,7 +394,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"👋 Namaste <b>{escape(name)}</b>!\n\n"
         f"🚀 <b>{escape(get_setting('bot_name', 'Bhushan Science Bot'))}</b> <b>LIVE</b> 🟢\n\n"
         f"{joke}\n\n"
-        "🧭 <b>Onboarding:</b> Mode → Course/Class → Semester/Year → Subject → Topic → Technique + Timer\n\n"
+        "🧭 <b>Onboarding:</b> Mode → General Science → Subject → Technique + Timer\n\n"
         "🎭 <b>Step 1 — Mode chuno:</b>\n"
         "Serious = professional • Fun = frank • Laparwah = savage/badtameez",
         parse_mode=ParseMode.HTML,
@@ -872,151 +411,17 @@ async def verify_join_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else: await q.edit_message_text("❌ Saare channels join karo.")
 
 async def class_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
-    cls = q.data.replace("cls_", "")
-    update_user(q.from_user.id, user_class=cls)
-    if cls in ("BSC", "GNM"):
-        context.user_data["course"] = cls
-        context.user_data["onboarding_step"] = "term"
-        await q.edit_message_text(
-            f"📚 <b>{escape(course_label(cls))}</b>\n\n"
-            "Semester/year choose karo. Har term ke andar INC curriculum ke subjects aur topic-wise notes milenge.",
-            parse_mode=ParseMode.HTML, reply_markup=course_terms_kb(cls))
-        return
-    if cls == "NORCET":
-        context.user_data['norcet_track'] = None
-        await q.edit_message_text("🇮🇳 <b>NORCET Syllabus</b>\n\nINC nursing curriculum ke according preparation track chuno.",
-            parse_mode=ParseMode.HTML, reply_markup=norcet_track_kb())
-        return
-    context.user_data['onboarding_step'] = 'subject'
-    await q.edit_message_text(f"📚 <b>{escape(cls)}</b>\n\n📖 Subject chuno:", parse_mode=ParseMode.HTML, reply_markup=subject_selection_kb())
-
-async def norcet_track_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
-    track = q.data.replace("ntrack_", "")
-    context.user_data['norcet_track'] = track
-    name = "INC B.Sc Nursing 2020" if track == "B" else "INC GNM 3-Year"
-    subjects = NORCET_BSC_SUBJECTS if track == "B" else NORCET_GNM_SUBJECTS
-    context.user_data['onboarding_step'] = 'subject'
+    q = update.callback_query
+    await q.answer()
+    touch_user(q.from_user.id)
+    update_user(q.from_user.id, user_class="Other")
+    context.user_data["onboarding_step"] = "subject"
     await q.edit_message_text(
-        f"📚 <b>{name}</b>\n\nTotal subjects/modules: <b>{len(subjects)}</b>\n"
-        "📖 <b>Step 3/4 — Subject select karo:</b>",
+        "📚 <b>General Science</b>\n\n📖 Subject chuno:",
         parse_mode=ParseMode.HTML,
-        reply_markup=norcet_subject_kb(track)
+        reply_markup=subject_selection_kb()
     )
 
-async def norcet_subject_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
-    code = q.data.replace("subn_", "")
-    subject = NORCET_SUBJECT_MAP.get(code, "General Nursing")
-    context.user_data['subject'] = subject
-    context.user_data['norcet_subject_code'] = code
-    if context.user_data.get('onboarding'):
-        await q.edit_message_text(
-            f"📚 <b>{escape(subject)}</b>\n\n"
-            "🎭 <b>Step 4/4 — Technique choose karo:</b>",
-            parse_mode=ParseMode.HTML,
-            reply_markup=InlineKeyboardMarkup([
-                [InlineKeyboardButton("🎭 Choose Technique", callback_data=f"ntech_{code}")],
-                [InlineKeyboardButton("📖 Important Topics", callback_data=f"ninfo_{code}")]
-            ])
-        )
-        return
-    await q.edit_message_text(
-        norcet_subject_info(subject),
-        parse_mode=ParseMode.HTML,
-        reply_markup=norcet_subject_info_kb(code)
-    )
-
-async def norcet_info_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
-    code = q.data.replace("ninfo_", "")
-    subject = NORCET_SUBJECT_MAP.get(code, "General Nursing")
-    context.user_data['subject'] = subject
-    context.user_data['norcet_subject_code'] = code
-    await q.edit_message_text(
-        norcet_subject_info(subject),
-        parse_mode=ParseMode.HTML,
-        reply_markup=norcet_subject_info_kb(code)
-    )
-
-async def norcet_technique_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
-    code = q.data.replace("ntech_", "")
-    subject = NORCET_SUBJECT_MAP.get(code, context.user_data.get('subject', 'General Nursing'))
-    context.user_data['subject'] = subject
-    context.user_data['norcet_subject_code'] = code
-    await q.edit_message_text(
-        f"📚 <b>{escape(subject)}</b>\n\n🎭 <b>Step 4/4 — Technique choose karo:</b>",
-        parse_mode=ParseMode.HTML,
-        reply_markup=technique_selection_kb()
-    )
-
-async def norcet_topic_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
-    parts = q.data.replace("ntopic_", "").rsplit("_", 1)
-    code = parts[0]
-    try:
-        topic_index = int(parts[1])
-    except (ValueError, IndexError):
-        await q.answer("Topic unavailable.", show_alert=True); return
-    subject = NORCET_SUBJECT_MAP.get(code, "General Nursing")
-    topics = norcet_subject_index(subject)
-    if topic_index < 0 or topic_index >= len(topics):
-        await q.answer("Topic unavailable.", show_alert=True); return
-    topic = topics[topic_index]
-    context.user_data["subject"] = subject
-    context.user_data["norcet_subject_code"] = code
-    detailed = DETAILED_TOPIC_CONTENT.get(topic.strip().lower())
-    if detailed:
-        try:
-            await q.message.reply_animation(detailed["gif"], caption="🎬🩺 Visual study break — ab notes focus se padho! 📚✨")
-        except Exception:
-            pass
-    await q.edit_message_text(
-        norcet_topic_info(subject, topic),
-        parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton("🔙 Important Topics", callback_data=f"nbacktopic_{code}")],
-            [InlineKeyboardButton("▶️ Start Study Session", callback_data=f"nstart_{code}")]
-        ])
-    )
-
-async def norcet_backtopic_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
-    code = q.data.replace("nbacktopic_", "")
-    subject = NORCET_SUBJECT_MAP.get(code, "General Nursing")
-    await q.edit_message_text(
-        norcet_subject_info(subject),
-        parse_mode=ParseMode.HTML,
-        reply_markup=norcet_subject_info_kb(code)
-    )
-
-async def norcet_back_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
-    track = q.data.replace("nback_", "")
-    await q.edit_message_text(
-        "📚 <b>Subject List</b>\n\nSubject select karo:",
-        parse_mode=ParseMode.HTML,
-        reply_markup=norcet_subject_kb(track)
-    )
-
-async def norcet_start_cb(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    q = update.callback_query; await q.answer(); touch_user(q.from_user.id)
-    code = q.data.replace("nstart_", "")
-    subject = NORCET_SUBJECT_MAP.get(code, context.user_data.get('subject', 'General Nursing'))
-    context.user_data['subject'] = subject
-    default = TECHNIQUES[context.user_data.get('technique', 'pomodoro')]['work'] * TECHNIQUES[context.user_data.get('technique', 'pomodoro')]['cycles']
-    context.user_data['duration'] = default
-    await q.edit_message_text(
-        f"🇮🇳 <b>{escape(subject)}</b>\n\n⏱ Default: <b>{default} min</b>\n\nDuration choose karo:",
-        parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup([
-            [InlineKeyboardButton(f"Default ({default}m)", callback_data=f"dur_{default}"), InlineKeyboardButton("30 min", callback_data="dur_30")],
-            [InlineKeyboardButton("1 ghanta", callback_data="dur_60"), InlineKeyboardButton("2 ghante", callback_data="dur_120")],
-            [InlineKeyboardButton("3 ghante", callback_data="dur_180"), InlineKeyboardButton("Custom", callback_data="dur_custom")]
-        ])
-    )
 
 # ================== MODE ==================
 async def mode_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1432,16 +837,16 @@ OPENAI_VISION_MODEL = os.getenv("OPENAI_VISION_MODEL", "gpt-4.1-mini").strip()
 
 async def ai_doubt_answer(image_bytes=None, question_text=""):
     if not OPENAI_API_KEY: return None
-    prompt = """You are Bhushan Science Bot's nursing/science doubt-solving AI.
-Read the student's question/image carefully and answer in clear Hinglish/English.
-For nursing/medical questions, use: Definition; Causes/Risk factors; Pathophysiology; Signs & Symptoms; Diagnosis/Investigations; Medical management; Surgical management; Pharmacological management; Nursing management; Lifestyle/Diet/Prevention; Nursing Care Plan; Nurse Responsibilities; Complications/Red flags; NORCET high-yield points.
-For non-medical questions, answer directly. If image is blurry/unreadable, say so instead of inventing text. Do not claim a diagnosis for a real patient from an image. For urgent symptoms advise medical evaluation."""
+    prompt = """You are Bhushan Science Bot, a clear and accurate general science study tutor.
+Read the student's question/image carefully and answer in clear Hinglish/English. Explain concepts step by step, define important terms, and use simple examples where helpful.
+For health-related science questions, provide general educational information only; do not diagnose a real person or prescribe treatment. For urgent symptoms, advise seeking help from a qualified healthcare professional.
+For other subjects, answer directly at an appropriate student level. If an image is blurry or unreadable, say so instead of inventing text."""
     content=[{"type":"text","text":prompt}]
     if question_text and question_text != "[Photo]": content.append({"type":"text","text":"Student question: "+question_text})
     if image_bytes:
         b64=base64.b64encode(image_bytes).decode("ascii")
         content.append({"type":"image_url","image_url":{"url":"data:image/jpeg;base64,"+b64,"detail":"high"}})
-    payload={"model":OPENAI_VISION_MODEL,"messages":[{"role":"system","content":"Accurate nursing/science tutor. Never fabricate unreadable information."},{"role":"user","content":content}],"temperature":0.2,"max_tokens":3000}
+    payload={"model":OPENAI_VISION_MODEL,"messages":[{"role":"system","content":"Accurate general science tutor. Never fabricate unreadable information."},{"role":"user","content":content}],"temperature":0.2,"max_tokens":3000}
     def call():
         req=Request("https://api.openai.com/v1/chat/completions",data=json.dumps(payload).encode(),headers={"Authorization":"Bearer "+OPENAI_API_KEY,"Content-Type":"application/json"},method="POST")
         with urlopen(req,timeout=90) as resp: return json.loads(resp.read().decode())
@@ -1943,31 +1348,6 @@ async def daily_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await q.edit_message_text(f"✅ Sahi! +15\n\n📖 {dq['explanation'] or ''}")
     else: await q.edit_message_text(f"❌ Galat. Sahi: <b>{dq['correct_option'].upper()}</b>\n\n📖 {dq['explanation'] or ''}", parse_mode=ParseMode.HTML)
 
-# ================== ONLINE SOURCE MONITOR ==================
-ONLINE_UPDATE_SOURCES = {
-    "INC": "https://www.indiannursingcouncil.org/updates",
-    "AIIMS": "https://www.aiimsexams.ac.in/",
-}
-def _online_title(url):
-    try:
-        req=Request(url,headers={"User-Agent":"BhushanScienceBot/3.2"})
-        with urlopen(req,timeout=8) as r: raw=r.read(120000).decode("utf-8","ignore")
-        m=re.search(r"<title[^>]*>(.*?)</title>",raw,re.I|re.S)
-        return re.sub(r"\s+"," ",m.group(1)).strip() if m else "OK"
-    except Exception as e: return f"ERROR: {type(e).__name__}"
-
-async def online_source_update_job(context):
-    changes=[]
-    for name,url in ONLINE_UPDATE_SOURCES.items():
-        title=await asyncio.to_thread(_online_title,url)
-        old=get_setting(f"online_{name.lower()}_title")
-        if old and old!=title and not title.startswith("ERROR:"): changes.append(f"🔔 {name} source changed")
-        set_setting(f"online_{name.lower()}_title",title)
-    set_setting("online_last_check",datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-    if changes and OWNER_ID>0:
-        try: await context.bot.send_message(OWNER_ID,"🌐 Online source update detected:\n"+"\n".join(changes))
-        except Exception: pass
-
 async def idle_coach_job(context):
     c=db()
     rows=c.execute("""SELECT user_id FROM users WHERE is_banned=0 AND COALESCE(current_session,0)=0 AND (last_active IS NULL OR last_active <= datetime('now','-2 minutes')) ORDER BY user_id""").fetchall()
@@ -1980,8 +1360,7 @@ async def idle_coach_job(context):
     qtxt=f"💭 {quote['text']}" if quote else "💭 Aaj ka rule: consistency > motivation."
     mtxt=f"😂 Meme: {meme['caption']}" if meme and meme['caption'] else "😂 Meme: Notes kholne ka notification aa gaya… ab ignore mat karna."
     msg=("⏰ <b>2-minute Study Check</b>\n\n📚 Abhi active study session nahi hai.\n"
-         "👉 2 minute bhi revise kar lo — phir session start karo.\n\n"+qtxt+"\n"+mtxt+
-         "\n\n🇮🇳 NORCET/INC content official-source curriculum ke according maintained hai.")
+         "👉 2 minute bhi revise kar lo — phir session start karo.\n\n"+qtxt+"\n"+mtxt)
     for r in rows:
         try:
             await context.bot.send_message(r["user_id"],msg,parse_mode=ParseMode.HTML)
@@ -2044,7 +1423,7 @@ def reschedule_jobs(app):
         log.error("❌ JobQueue unavailable. Install python-telegram-bot[job-queue].")
         return
 
-    for name in ["daily_quote", "daily_meme", "daily_quiz", "exam_countdown", "idle_coach", "online_source_update", "auto_meme_publish"]:
+    for name in ["daily_quote", "daily_meme", "daily_quiz", "exam_countdown", "idle_coach", "auto_meme_publish"]:
         for j in job_queue.get_jobs_by_name(name):
             j.schedule_removal()
 
@@ -2061,7 +1440,6 @@ def reschedule_jobs(app):
         name="exam_countdown",
     )
     job_queue.run_repeating(idle_coach_job, interval=120, first=120, name="idle_coach")
-    job_queue.run_repeating(online_source_update_job, interval=120, first=10, name="online_source_update")
     try:
         meme_interval = max(300, int(get_setting("auto_meme_interval", "1800") or 1800))
     except (TypeError, ValueError):
@@ -2272,6 +1650,7 @@ def main():
     app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
     app.add_error_handler(bot_error_handler)
 
+    exempt_commands = {"start", "help", "cancel", "admin"}
     for cmd, fn in [
         ("start", start), ("app", app_cmd), ("help", help_cmd), ("admin", admin_cmd), ("support", support_cmd), ("cancel", cancel_cmd), ("instamart", instamart_command), ("forceadd", forceadd), ("forcedisable", forcedisable),
         ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel),
@@ -2282,18 +1661,23 @@ def main():
         ("addmeme", addmeme), ("delmeme", delmeme), ("listmemes", listmemes),
         ("addpyq", addpyq)
     ]:
-        app.add_handler(CommandHandler(cmd, fn))
+        if cmd in exempt_commands:
+            handler_fn = fn
+        else:
+            async def guarded_command(update, context, _fn=fn):
+                uid = update.effective_user.id
+                if not is_admin(uid):
+                    missing = await force_join_check(context.bot, uid)
+                    if missing:
+                        await force_join_prompt(update, context, missing)
+                        return
+                await _fn(update, context)
+
+            handler_fn = guarded_command
+        app.add_handler(CommandHandler(cmd, handler_fn))
 
     for pat, fn in [
         ("^a_app_missing$", app_missing_cb), ("^cls_", class_cb),
-        ("^ntrack_", norcet_track_cb), ("^cterm_", course_term_cb),
-        ("^cpractice_", course_practice_cb), ("^tqa_", topic_answer_cb),
-        ("^csubback_", course_subback_cb), ("^csub_", course_subject_cb),
-        ("^ctopic_", course_topic_cb), ("^cstart_", course_start_cb),
-        ("^cback_", course_back_cb), ("^subn_", norcet_subject_cb),
-        ("^ninfo_", norcet_info_cb), ("^ntech_", norcet_technique_cb),
-        ("^ntopic_", norcet_topic_cb), ("^nbacktopic_", norcet_backtopic_cb),
-        ("^nstart_", norcet_start_cb), ("^nback_", norcet_back_cb),
         ("^tech_", technique_cb), ("^sess_pause_", session_pause_cb),
         ("^sess_resume_", session_resume_cb), ("^sess_stop_", session_stop_cb),
         ("^sub_", subject_cb), ("^dur_", duration_cb), ("^ans_", answer_cb),
@@ -2301,7 +1685,22 @@ def main():
         ("^support_new$", support_callback), ("^ticket_(reply|close):\\d+$", support_callback), ("^force_verify$", force_verify_cb),
         ("^a_fj", fj_toggle), ("^a_", admin_cb)
     ]:
-        app.add_handler(CallbackQueryHandler(fn, pattern=pat))
+        if pat == "^force_verify$":
+            handler_fn = fn
+        else:
+            async def guarded_callback(update, context, _fn=fn):
+                query = update.callback_query
+                uid = query.from_user.id
+                if not is_admin(uid):
+                    missing = await force_join_check(context.bot, uid)
+                    if missing:
+                        await query.answer("Pehle required channel(s) join karo.", show_alert=True)
+                        await force_join_prompt(update, context, missing)
+                        return
+                await _fn(update, context)
+
+            handler_fn = guarded_callback
+        app.add_handler(CallbackQueryHandler(handler_fn, pattern=pat))
 
     app.add_handler(MessageHandler(filters.ChatType.CHANNEL, channel_post))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_router))
