@@ -2272,6 +2272,7 @@ def main():
     app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
     app.add_error_handler(bot_error_handler)
 
+    exempt_commands = {"start", "help", "cancel", "admin"}
     for cmd, fn in [
         ("start", start), ("app", app_cmd), ("help", help_cmd), ("admin", admin_cmd), ("support", support_cmd), ("cancel", cancel_cmd), ("instamart", instamart_command), ("forceadd", forceadd), ("forcedisable", forcedisable),
         ("mode", mode_cmd), ("addchannel", addchannel), ("delchannel", delchannel),
@@ -2282,7 +2283,20 @@ def main():
         ("addmeme", addmeme), ("delmeme", delmeme), ("listmemes", listmemes),
         ("addpyq", addpyq)
     ]:
-        app.add_handler(CommandHandler(cmd, fn))
+        if cmd in exempt_commands:
+            handler_fn = fn
+        else:
+            async def guarded_command(update, context, _fn=fn):
+                uid = update.effective_user.id
+                if not is_admin(uid):
+                    missing = await force_join_check(context.bot, uid)
+                    if missing:
+                        await force_join_prompt(update, context, missing)
+                        return
+                await _fn(update, context)
+
+            handler_fn = guarded_command
+        app.add_handler(CommandHandler(cmd, handler_fn))
 
     for pat, fn in [
         ("^a_app_missing$", app_missing_cb), ("^cls_", class_cb),
@@ -2301,7 +2315,22 @@ def main():
         ("^support_new$", support_callback), ("^ticket_(reply|close):\\d+$", support_callback), ("^force_verify$", force_verify_cb),
         ("^a_fj", fj_toggle), ("^a_", admin_cb)
     ]:
-        app.add_handler(CallbackQueryHandler(fn, pattern=pat))
+        if pat == "^force_verify$":
+            handler_fn = fn
+        else:
+            async def guarded_callback(update, context, _fn=fn):
+                query = update.callback_query
+                uid = query.from_user.id
+                if not is_admin(uid):
+                    missing = await force_join_check(context.bot, uid)
+                    if missing:
+                        await query.answer("Pehle required channel(s) join karo.", show_alert=True)
+                        await force_join_prompt(update, context, missing)
+                        return
+                await _fn(update, context)
+
+            handler_fn = guarded_callback
+        app.add_handler(CallbackQueryHandler(handler_fn, pattern=pat))
 
     app.add_handler(MessageHandler(filters.ChatType.CHANNEL, channel_post))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, msg_router))
