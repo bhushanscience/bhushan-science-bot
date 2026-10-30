@@ -1362,8 +1362,7 @@ async def idle_coach_job(context):
     qtxt=f"💭 {quote['text']}" if quote else "💭 Aaj ka rule: consistency > motivation."
     mtxt=f"😂 Meme: {meme['caption']}" if meme and meme['caption'] else "😂 Meme: Notes kholne ka notification aa gaya… ab ignore mat karna."
     msg=("⏰ <b>2-minute Study Check</b>\n\n📚 Abhi active study session nahi hai.\n"
-         "👉 2 minute bhi revise kar lo — phir session start karo.\n\n"+qtxt+"\n"+mtxt+
-         "\n\n🇮🇳 NORCET/INC content official-source curriculum ke according maintained hai.")
+         "👉 2 minute bhi revise kar lo — phir session start karo.\n\n"+qtxt+"\n"+mtxt)
     for r in rows:
         try:
             await context.bot.send_message(r["user_id"],msg,parse_mode=ParseMode.HTML)
