@@ -77,10 +77,8 @@ MODES = {
 }
 
 SMART_JOKES = [
-    "🧠 Smart joke: Nurse ne BP machine se kaha — “Tumhara pressure mujhe bhi pressure de raha hai!” 😄",
-    "🧠 Smart joke: Anatomy student ka favourite map? — “Body ka internal Google Maps.” 😂",
-    "🧠 Smart joke: Pharmacology student ne kaha — “Meri coffee ki dose PRN hai: jab tak jagta rahun.” ☕😄",
-    "🧠 Smart joke: Physiology ne poocha, “Heart ka kaam?” Student bola — “Beat drop karna.” ❤️😂",
+    "🧠 Smart joke: Physics student ka favourite music? — “Current hits!” ⚡😂",
+    "🧠 Smart joke: Chemistry student ka favourite relationship status? — “Strong bonds only.” 🧪😂",
 ]
 
 ROAST_LINES = [
