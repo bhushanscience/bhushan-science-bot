@@ -318,18 +318,85 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   ]);
 }
 
-class SupportPage extends StatelessWidget {
+class SupportPage extends StatefulWidget {
   final String language;
   const SupportPage({super.key, required this.language});
   @override
+  State<SupportPage> createState() => _SupportPageState();
+}
+
+class _SupportPageState extends State<SupportPage> {
+  final controller = TextEditingController();
+  final messages = <Map<String, String>>[
+    {'from': 'ai', 'text': 'Demo AI online 😏 Doubt pucho. Fixed-answer mode hai—real AI ka natak nahi.'}
+  ];
+
+  String answerFor(String raw) {
+    final q = raw.toLowerCase();
+    final hinglish = widget.language == 'Hinglish';
+    final hindi = widget.language == 'Hindi';
+    String response;
+    if (q.contains('hello') || q.contains('hi') || q.contains('hey') || q.contains('namaste')) {
+      response = hinglish ? 'Oho, hello! Doubt lao—sirf “hi” se syllabus khatam nahi hoga 😄' : hindi ? 'नमस्ते! अपना सवाल पूछिए, पढ़ाई शुरू करें।' : 'Hello! Send your study doubt and let’s work on it.';
+    } else if (q.contains('heart') || q.contains('cardiac') || q.contains('blood')) {
+      response = hinglish ? 'Heart ek muscular pump hai jo blood ko lungs aur body tak circulate karta hai. Four chambers: right/left atria, right/left ventricles. Yaad rakho: ventricles blood pump out karte hain.' : hindi ? 'हृदय एक मांसपेशीय पंप है जो रक्त को फेफड़ों और पूरे शरीर में भेजता है। इसमें चार कक्ष होते हैं।' : 'The heart is a muscular pump that circulates blood through the lungs and body. It has four chambers; the ventricles pump blood out.';
+    } else if (q.contains('anatomy')) {
+      response = hinglish ? 'Anatomy = body structures ka study. Physiology = body functions ka study. Dono ko mix mat karna, warna exam tumhari le lega 😅' : hindi ? 'Anatomy शरीर की संरचना का अध्ययन है; Physiology शरीर के कार्यों का अध्ययन है।' : 'Anatomy studies body structures; physiology studies how those structures function.';
+    } else if (q.contains('physiology')) {
+      response = hinglish ? 'Physiology body ke normal functions samjhati hai—jaise circulation, respiration, digestion aur nerve signaling. Concept samjho, bas definition ratto mat.' : hindi ? 'Physiology शरीर के सामान्य कार्यों जैसे परिसंचरण, श्वसन और पाचन का अध्ययन है।' : 'Physiology explains normal body functions such as circulation, respiration, digestion, and nerve signaling.';
+    } else if (q.contains('study') || q.contains('plan') || q.contains('schedule') || q.contains('padh')) {
+      response = hinglish ? 'Mini plan: 25 min focused study, 5 min break; phir 5 MCQs aur active recall. Phone side mein—warna padhai se zyada scrolling hogi 😏' : hindi ? 'छोटी योजना: 25 मिनट पढ़ाई, 5 मिनट विराम, फिर 5 प्रश्न और सक्रिय स्मरण।' : 'Try a 25-minute focused session, a 5-minute break, then five practice questions and active recall.';
+    } else if (q.contains('quiz') || q.contains('mcq') || q.contains('question')) {
+      response = hinglish ? 'Quick MCQ: Body mein blood pump karne wala main organ? A) Lung B) Heart C) Kidney D) Liver. Answer A/B/C/D bhejo.' : hindi ? 'प्रश्न: शरीर में रक्त पंप करने वाला मुख्य अंग कौन है? A) फेफड़ा B) हृदय C) गुर्दा D) यकृत।' : 'Quick MCQ: Which organ primarily pumps blood? A) Lung B) Heart C) Kidney D) Liver. Reply A/B/C/D.';
+    } else if (q == 'b' || q.contains('answer b')) {
+      response = hinglish ? 'Correct—Heart! 🫀 Ab dekha, dimag kaam kar raha hai. Next concept?' : hindi ? 'सही उत्तर—हृदय! अगला प्रश्न करें?' : 'Correct—Heart! Ready for the next concept?';
+    } else if (q.contains('motivat') || q.contains('lazy') || q.contains('mood')) {
+      response = hinglish ? 'Motivation ka wait mat karo. Bas 10 minutes start kar—mood baad mein attendance lagayega. Tu kar sakta hai.' : hindi ? 'प्रेरणा का इंतज़ार न करें। केवल 10 मिनट शुरू करें; गति अपने आप बनेगी।' : 'Don’t wait for motivation. Start with ten minutes; momentum often follows.';
+    } else if (q.contains('help') || q.contains('support')) {
+      response = hinglish ? 'Demo support mein Anatomy, Physiology, Heart/Blood, study planning aur sample MCQs cover hain. Specific doubt type karo.' : hindi ? 'डेमो सहायता Anatomy, Physiology, हृदय/रक्त, अध्ययन योजना और MCQ में मदद करती है।' : 'Demo support covers Anatomy, Physiology, heart/blood, study planning, and sample MCQs. Try a specific question.';
+    } else {
+      response = hinglish ? 'Is topic ka fixed reply abhi database mein nahi hai 😅 Try Anatomy, Physiology, heart, blood, study plan ya MCQ. Main demo hoon, all-knowing professor nahi.' : hindi ? 'इस विषय का निश्चित उत्तर अभी उपलब्ध नहीं है। Anatomy, Physiology, हृदय, रक्त या अध्ययन योजना पूछें।' : 'I don’t have a fixed reply for that topic yet. Try Anatomy, Physiology, heart, blood, a study plan, or MCQs. This is a demo responder.';
+    }
+    if (q.contains('damn') || q.contains('stupid')) {
+      response = hinglish ? 'Arre frank mode hai, disrespect mode nahi 😏 Chalo doubt pe aate hain.' : response;
+    }
+    return response;
+  }
+
+  void send() {
+    final text = controller.text.trim();
+    if (text.isEmpty) return;
+    setState(() {
+      messages.add({'from': 'user', 'text': text});
+      messages.add({'from': 'ai', 'text': answerFor(text)});
+      controller.clear();
+    });
+  }
+
+  @override
+  void dispose() { controller.dispose(); super.dispose(); }
+
+  @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Study Support')),
-    body: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      const Text('AI support setup', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-      const SizedBox(height: 12),
-      Text(language == 'Hinglish'
-          ? 'Abhi AI provider connect nahi hai. Backend endpoint aur securely stored API key configure hone ke baad doubts ka intelligent answer, explanation aur language matching enable hoga.'
-          : 'The AI provider is not connected yet. Configure a backend endpoint and securely stored API key to enable intelligent explanations and language matching.'),
-    ])),
+    appBar: AppBar(title: const Text('Demo AI Study Support'), actions: const [Padding(padding: EdgeInsets.all(12), child: Center(child: Text('FIXED REPLIES')))]),
+    body: Column(children: [
+      Container(width: double.infinity, padding: const EdgeInsets.all(10), color: Colors.orange.withValues(alpha: 0.12), child: const Text('Demo responder • Keyword matching • Not a live generative AI', textAlign: TextAlign.center, style: TextStyle(color: Colors.orangeAccent))),
+      Expanded(child: ListView.builder(padding: const EdgeInsets.all(12), itemCount: messages.length, itemBuilder: (context, i) {
+        final item = messages[i];
+        final isUser = item['from'] == 'user';
+        return Align(alignment: isUser ? Alignment.centerRight : Alignment.centerLeft, child: Container(
+          constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.82),
+          margin: const EdgeInsets.symmetric(vertical: 5),
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(color: isUser ? const Color(0xFF343B78) : _panel, borderRadius: BorderRadius.circular(16)),
+          child: Text(item['text'] ?? ''),
+        ));
+      })),
+      Padding(padding: const EdgeInsets.fromLTRB(12, 8, 12, 12), child: Row(children: [
+        Expanded(child: TextField(controller: controller, onSubmitted: (_) => send(), decoration: const InputDecoration(hintText: 'Type your doubt…', border: OutlineInputBorder()))),
+        const SizedBox(width: 8),
+        IconButton.filled(onPressed: send, icon: const Icon(Icons.send)),
+      ])),
+    ]),
   );
 }
