@@ -223,7 +223,7 @@ class _PracticePageState extends State<PracticePage> {
       const SizedBox(height: 12),
       RadioGroup<int>(
         groupValue: answer,
-        onChanged: checked ? null : (value) => setState(() => answer = value),
+        onChanged: (value) { if (!checked) setState(() => answer = value); },
         child: Column(children: options.asMap().entries.map((entry) => Card(
           color: answer == entry.key ? const Color(0xFF343B78) : _panel,
           child: ListTile(
