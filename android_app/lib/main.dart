@@ -221,13 +221,17 @@ class _PracticePageState extends State<PracticePage> {
       const SizedBox(height: 10),
       const Text('Which organ primarily pumps blood throughout the body?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
       const SizedBox(height: 12),
-      ...options.asMap().entries.map((entry) => Card(
-        color: answer == entry.key ? const Color(0xFF343B78) : _panel,
-        child: ListTile(
-          title: Text(entry.value),
-          leading: Radio<int>(value: entry.key, groupValue: answer, onChanged: checked ? null : (value) => setState(() => answer = value)),
-        ),
-      )),
+      RadioGroup<int>(
+        groupValue: answer,
+        onChanged: checked ? null : (value) => setState(() => answer = value),
+        child: Column(children: options.asMap().entries.map((entry) => Card(
+          color: answer == entry.key ? const Color(0xFF343B78) : _panel,
+          child: ListTile(
+            title: Text(entry.value),
+            leading: Radio<int>(value: entry.key),
+          ),
+        )).toList()),
+      ),
       if (checked) Text(answer == 1 ? 'Correct! Nice work.' : 'Correct answer: Heart. Review the concept and try again.', style: const TextStyle(fontWeight: FontWeight.bold)),
       const Spacer(),
       Row(children: [
