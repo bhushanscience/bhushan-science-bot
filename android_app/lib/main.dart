@@ -331,6 +331,101 @@ class _SupportPageState extends State<SupportPage> {
     {'from': 'ai', 'text': 'Demo AI online 😏 Doubt pucho. Fixed-answer mode hai—real AI ka natak nahi.'}
   ];
 
+  // Procedural roast engine: 50 x 50 x 40 = 100,000 possible combinations.
+  // Keeps the humor sharp and playful without slurs or degrading abuse.
+  String roastReply(String raw) {
+    const openers = [
+      'Wah, kya legendary confusion hai:', 'Syllabus ne phir se tumhe side quest pe bhej diya:',
+      'Dimaag ka loading screen abhi chal raha hai:', 'Confidence full, answer pending:',
+      'Academic drama ka latest episode:', 'Padhai se tumhari hide-and-seek championship:',
+      'Question aaya aur neurons ne emergency meeting bula li:', 'Kya plot twist hai:',
+      'Notes khule hain, focus vacation pe:', 'Brain ko reboot ki zaroorat lag rahi:',
+      'Aaj ka intellectual adventure:', 'Ye doubt bhi VIP entry leke aaya:',
+      'Concept ne tumhe seen-zone kar diya:', 'Study mode ka software update pending:',
+      'Tum aur syllabus—complicated relationship:', 'MCQ dekh ke options bhi confused:',
+      'Knowledge ka Wi-Fi weak lag raha:', 'Exam prep ka sitcom moment:',
+      'Aaj logic thoda late shift pe hai:', 'Padhai ke battlefield ka funny scene:',
+      'Question ki entry dramatic thi:', 'Focus ka attendance short hai:',
+      'Revision ka ghost phir aa gaya:', 'Brain cells group chat mein busy:',
+      'Ye toh confusion ka premium edition:', 'Concept clarity ne chhutti maangi:',
+      'Notes bol rahe “mujhe bhi padh lo”:', 'Academic suspense peak pe:',
+      'Aaj ka brain teaser tumse zyada confident:', 'Syllabus ka villain arc:',
+      'Tumhari study story mein unexpected twist:', 'Answer ka hideout abhi unknown:',
+      'Doubt ne full cinematic entry maari:', 'Focus ka GPS rerouting:',
+      'Padhai ka sitcom laugh track ready:', 'Knowledge loading, patience buffering:',
+      'Exam prep mein comedy quota complete:', 'Neuron squad thoda late hai:',
+      'Ye confusion bhi bada artist hai:', 'Study desk pe plot thickens:',
+      'Brain ka refresh button dhoondte hain:', 'Question ne thoda overacting ki:',
+      'Concept ka suspense thriller:', 'Aaj recall ne drama kar diya:',
+      'Syllabus tumhe challenge kar raha:', 'Padhai ki story mein comic relief:',
+      'Logic ki train platform pe hai:', 'Focus ne short break ko long weekend bana diya:',
+      'Aaj ka doubt full entertainment:', 'Academic chaos, but make it funny:'
+    ];
+    const jabs = [
+      'focus ko attendance lagwao, warna woh ghost student ban jayega',
+      'notes ko decoration se learning material mein promote karo',
+      'scrolling ki PhD chhodo, concept pe nazar daalo',
+      'brain ko airplane mode se bahar lao',
+      'confidence ko facts ke saath pair karao',
+      'revision ko kal ke calendar se aaj mein shift karo',
+      'MCQ ko dekh ke bhaagna official strategy nahi hoti',
+      'thoda recall karo, memory ko museum mat banao',
+      'study table ko photo-shoot location se classroom banao',
+      'concept ko samjho, ratta ka customer care band hai',
+      'focus ko chai break ke permanent contract se nikaalo',
+      'notes padh lo; woh tumhare fan club ke pamphlet nahi',
+      'syllabus se negotiation band karke shuru ho jao',
+      'brain ko warm-up do, seedha final boss mat bhejo',
+      'distraction ko unpaid intern ki tarah side pe rakho',
+      'answer dhoondo, dramatic pause se marks nahi milte',
+      'revision karo; memory koi cloud backup guarantee nahi',
+      'padhai ko “coming soon” poster mat banao',
+      'ek topic niptao, procrastination ka award baad mein',
+      'focus ko leash nahi, routine chahiye',
+      'question solve karo, options ko family meeting mat karne do',
+      'apne notes ko finally plot mein lao',
+      '10 minute start karo; excuses ka TED Talk baad mein',
+      'concept pe kaam karo, vibes se exam pass nahi hota',
+      'study streak ko reboot karo, excuses ko nahi',
+      'knowledge install karo; confidence already preloaded hai',
+      'doubt clear karo, confusion ka franchise mat kholo',
+      'practice karo; talent ko bhi attendance chahiye',
+      'revision ko “someday” folder se restore karo',
+      'phone ko break do, woh tumse zyada active hai',
+      'ek MCQ karo, academic suspense khatam karo',
+      'focus ko meeting invite bhejo—abhi',
+      'learning ko start karo, planning ka sequel mat banao',
+      'topic ko tackle karo, usko seen pe mat chhodo',
+      'memory ko gym nahi, regular practice chahiye',
+      'padhai ki steering pakdo, autopilot excuses nahi',
+      'brain ko task do, bas wallpaper mat banao',
+      'answer attempt karo, perfection ka wait mat karo',
+      'syllabus ko bite-size karo, monster movie nahi',
+      'concept revise karo, confusion ko rent-free mat rakho',
+      'apni mehnat ko cameo nahi, lead role do',
+      'focus ka comeback episode shoot karo',
+      'practice se hi options ki aukaat samajh aayegi',
+      'ek page padho, phir heroic announcement karna',
+      'study mode on karo; drama mode already on hai',
+      'doubt bhejo, overthinking ko unpaid overtime mat do',
+      'learning ka engine start karo, horn bajana band',
+      'routine banao, motivation ka weather unreliable hai',
+      'marks ke liye kaam karo, excuses ke liye nahi'
+    ];
+    const nudges = [
+      'Chalo, ab actual question batao 😏','Ab padhai ka scene set karo 😎',
+      'Kya topic hai? Seedha bolo.','Let’s turn this chaos into clarity.',
+      'Ek step abhi—baaki baad mein.','Ab answer pe aate hain.',
+      'Drama side, concept center.','Chalo, comeback shuru.',
+      'Ab MCQ bhejo.','Focus mode activate karo.'
+    ];
+    int hash = raw.codeUnits.fold(17, (a, b) => (a * 31 + b) & 0x7fffffff);
+    final opener = openers[hash % openers.length];
+    final jab = jabs[(hash ~/ openers.length) % jabs.length];
+    final nudge = nudges[(hash ~/ (openers.length * jabs.length)) % nudges.length];
+    return '$opener $jab. $nudge';
+  }
+
   String answerFor(String raw) {
     final q = raw.toLowerCase();
     final hinglish = widget.language == 'Hinglish';
@@ -355,7 +450,7 @@ class _SupportPageState extends State<SupportPage> {
     } else if (q.contains('help') || q.contains('support')) {
       response = hinglish ? 'Demo support mein Anatomy, Physiology, Heart/Blood, study planning aur sample MCQs cover hain. Specific doubt type karo.' : hindi ? 'डेमो सहायता Anatomy, Physiology, हृदय/रक्त, अध्ययन योजना और MCQ में मदद करती है।' : 'Demo support covers Anatomy, Physiology, heart/blood, study planning, and sample MCQs. Try a specific question.';
     } else {
-      response = hinglish ? 'Is topic ka fixed reply abhi database mein nahi hai 😅 Try Anatomy, Physiology, heart, blood, study plan ya MCQ. Main demo hoon, all-knowing professor nahi.' : hindi ? 'इस विषय का निश्चित उत्तर अभी उपलब्ध नहीं है। Anatomy, Physiology, हृदय, रक्त या अध्ययन योजना पूछें।' : 'I don’t have a fixed reply for that topic yet. Try Anatomy, Physiology, heart, blood, a study plan, or MCQs. This is a demo responder.';
+      response = hinglish ? '${roastReply(raw)} Try Anatomy, Physiology, heart, blood, study plan ya MCQ.' : hindi ? 'इस विषय का निश्चित उत्तर अभी उपलब्ध नहीं है। Anatomy, Physiology, हृदय, रक्त या अध्ययन योजना पूछें।' : 'I don’t have a fixed reply for that topic yet. Try Anatomy, Physiology, heart, blood, a study plan, or MCQs. This is a demo responder.';
     }
     if (q.contains('damn') || q.contains('stupid')) {
       response = hinglish ? 'Arre frank mode hai, disrespect mode nahi 😏 Chalo doubt pe aate hain.' : response;
