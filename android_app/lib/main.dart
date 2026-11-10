@@ -1,0 +1,49 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+
+void main() => runApp(const BhushanScienceApp());
+
+class BhushanScienceApp extends StatelessWidget {
+  const BhushanScienceApp({super.key});
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    title: 'Bhushan Science', debugShowCheckedModeBanner: false,
+    theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF7C83FF), brightness: Brightness.dark), scaffoldBackgroundColor: const Color(0xFF0B1020), useMaterial3: true),
+    home: const HomeShell(),
+  );
+}
+
+class HomeShell extends StatefulWidget { const HomeShell({super.key}); @override State<HomeShell> createState() => _HomeShellState(); }
+class _HomeShellState extends State<HomeShell> {
+  int index = 0;
+  final pages = const [DashboardPage(), StudyPage(), QuizPage(), TimerPage(), ProfilePage()];
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    body: SafeArea(child: pages[index]),
+    bottomNavigationBar: NavigationBar(backgroundColor: const Color(0xFF121A2D), selectedIndex: index, onDestinationSelected: (v)=>setState(()=>index=v), destinations: const [
+      NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'), NavigationDestination(icon: Icon(Icons.menu_book_rounded), label: 'Study'), NavigationDestination(icon: Icon(Icons.quiz_rounded), label: 'Quiz'), NavigationDestination(icon: Icon(Icons.timer_rounded), label: 'Timer'), NavigationDestination(icon: Icon(Icons.person_rounded), label: 'Profile'),
+    ]),
+  );
+}
+
+class DashboardPage extends StatelessWidget { const DashboardPage({super.key});
+  @override Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(20), children: [
+    const Row(children:[CircleAvatar(backgroundColor: Color(0xFF282F59), child: Icon(Icons.school_rounded,color: Color(0xFF9EA4FF))), SizedBox(width:12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,children:[Text('BHUSHAN SCIENCE',style:TextStyle(fontWeight:FontWeight.bold,letterSpacing:1.2)),Text('Your study companion',style:TextStyle(color:Colors.white60))])), Icon(Icons.notifications_none_rounded)]),
+    const SizedBox(height:24), Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF343B78),Color(0xFF20294A)]),borderRadius:BorderRadius.circular(24)),child:const Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Keep learning, keep growing ✨',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold)),SizedBox(height:8),Text('Small study sessions add up to big progress.',style:TextStyle(color:Colors.white70)),SizedBox(height:18),Row(children:[Icon(Icons.local_fire_department,color:Color(0xFFFFC36B)),SizedBox(width:6),Text('Daily goal • 0 / 50 points')])])),
+    const SizedBox(height:22),const Text('Your learning space',style:TextStyle(fontSize:18,fontWeight:FontWeight.bold)),const SizedBox(height:12),
+    const Wrap(spacing:12,runSpacing:12,children:[FeatureTile(icon:Icons.medical_services_rounded,title:'BSc Nursing',subtitle:'Semesters 1–8'),FeatureTile(icon:Icons.health_and_safety_rounded,title:'GNM Nursing',subtitle:'Years 1–3'),FeatureTile(icon:Icons.library_books_rounded,title:'Syllabus',subtitle:'Subjects & topics'),FeatureTile(icon:Icons.emoji_events_rounded,title:'Achievements',subtitle:'Points & badges')]),
+    const SizedBox(height:22),Container(padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:const Color(0xFF151D31),borderRadius:BorderRadius.circular(18)),child:const Row(children:[Icon(Icons.lightbulb_outline,color:Color(0xFFFFD479)),SizedBox(width:12),Expanded(child:Text('Study tip: use active recall—close your notes and explain the topic in your own words.'))]))
+  ]);
+}
+class FeatureTile extends StatelessWidget { final IconData icon; final String title,subtitle; const FeatureTile({super.key,required this.icon,required this.title,required this.subtitle});
+  @override Widget build(BuildContext context)=>Container(width:MediaQuery.of(context).size.width/2-27,padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:const Color(0xFF151D31),borderRadius:BorderRadius.circular(18),border:Border.all(color:Colors.white10)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(icon,color:const Color(0xFF9EA4FF),size:28),const SizedBox(height:14),Text(title,style:const TextStyle(fontWeight:FontWeight.bold)),const SizedBox(height:4),Text(subtitle,style:const TextStyle(color:Colors.white60,fontSize:12))]));
+}
+class StudyPage extends StatefulWidget { const StudyPage({super.key}); @override State<StudyPage> createState()=>_StudyPageState(); }
+class _StudyPageState extends State<StudyPage>{String track='BSc Nursing'; final semesters=List.generate(8,(i)=>'Semester ${i+1}'); final years=List.generate(3,(i)=>'Year ${i+1}');
+@override Widget build(BuildContext context)=>ListView(padding:const EdgeInsets.all(20),children:[const Text('Study library',style:TextStyle(fontSize:26,fontWeight:FontWeight.bold)),const SizedBox(height:16),SegmentedButton<String>(segments:const[ButtonSegment(value:'BSc Nursing',label:Text('BSc Nursing')),ButtonSegment(value:'GNM Nursing',label:Text('GNM Nursing'))],selected:{track},onSelectionChanged:(s)=>setState(()=>track=s.first)),const SizedBox(height:18),...((track=='BSc Nursing'?semesters:years).map((label)=>Card(color:const Color(0xFF151D31),child:ListTile(leading:const Icon(Icons.folder_open,color:Color(0xFF9EA4FF)),title:Text(label),subtitle:const Text('Subjects • Topics • Syllabus'),trailing:const Icon(Icons.chevron_right),onTap:()=>showDialog(context:context,builder:(c)=>AlertDialog(title:Text(label),content:const Text('Study content will be loaded from the Bhushan Science content service when it is connected.'),actions:[TextButton(onPressed:()=>Navigator.pop(c),child:const Text('OK'))]))))))]);}
+class QuizPage extends StatefulWidget { const QuizPage({super.key}); @override State<QuizPage> createState()=>_QuizPageState(); }
+class _QuizPageState extends State<QuizPage>{int? selected; bool submitted=false; @override Widget build(BuildContext context)=>Padding(padding:const EdgeInsets.all(20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Practice quiz',style:TextStyle(fontSize:26,fontWeight:FontWeight.bold)),const SizedBox(height:18),const Text('Sample question • Anatomy',style:TextStyle(color:Color(0xFF9EA4FF))),const SizedBox(height:10),const Text('Which organ primarily pumps blood throughout the body?',style:TextStyle(fontSize:19,fontWeight:FontWeight.w600)),const SizedBox(height:14),...['Lungs','Heart','Kidney','Liver'].asMap().entries.map((e)=>Card(color:selected==e.key?const Color(0xFF343B78):const Color(0xFF151D31),child:RadioListTile<int>(value:e.key,groupValue:selected,title:Text(e.value),onChanged:submitted?null:(v)=>setState(()=>selected=v)))),if(submitted)Padding(padding:const EdgeInsets.all(12),child:Text(selected==1?'Correct! The heart pumps blood through the body.':'Answer: Heart. The heart pumps blood through the body.',style:const TextStyle(fontWeight:FontWeight.bold))),const Spacer(),FilledButton(onPressed:selected==null?null:()=>setState(()=>submitted=true),child:Text(submitted?'Answer submitted':'Check answer'))]));}
+class TimerPage extends StatefulWidget { const TimerPage({super.key}); @override State<TimerPage> createState()=>_TimerPageState(); }
+class _TimerPageState extends State<TimerPage>{int seconds=25*60; Timer? ticker; bool running=false; void start(){if(running)return;setState(()=>running=true);ticker=Timer.periodic(const Duration(seconds:1),(t){if(seconds<=1){t.cancel();setState(()=>{seconds=0,running=false});}else setState(()=>seconds--);});} void reset(){ticker?.cancel();setState(()=>{seconds=25*60,running=false});} @override void dispose(){ticker?.cancel();super.dispose();}
+@override Widget build(BuildContext context){final mm=(seconds~/60).toString().padLeft(2,'0');final ss=(seconds%60).toString().padLeft(2,'0');return Center(child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[const Text('Focus timer',style:TextStyle(fontSize:26,fontWeight:FontWeight.bold)),const SizedBox(height:24),Container(width:240,height:240,decoration:BoxDecoration(shape:BoxShape.circle,border:Border.all(color:const Color(0xFF7C83FF),width:8),color:const Color(0xFF151D31)),child:Center(child:Text('$mm:$ss',style:const TextStyle(fontSize:48,fontWeight:FontWeight.bold)))),const SizedBox(height:24),const Text('Pomodoro • 25 minutes',style:TextStyle(color:Colors.white60)),const SizedBox(height:20),Wrap(spacing:12,children:[FilledButton.icon(onPressed:seconds==0?reset:(running?()=>{ticker?.cancel(),setState(()=>running=false)}:start),icon:Icon(running?Icons.pause:Icons.play_arrow),label:Text(running?'Pause':seconds==0?'Restart':'Start')),OutlinedButton.icon(onPressed:reset,icon:const Icon(Icons.refresh),label:const Text('Reset'))])]);}}
+class ProfilePage extends StatelessWidget {const ProfilePage({super.key}); @override Widget build(BuildContext context)=>ListView(padding:const EdgeInsets.all(20),children:[const Text('Profile',style:TextStyle(fontSize:26,fontWeight:FontWeight.bold)),const SizedBox(height:20),const CircleAvatar(radius:38,backgroundColor:Color(0xFF282F59),child:Icon(Icons.person,size:42,color:Color(0xFF9EA4FF))),const SizedBox(height:12),const Center(child:Text('Student',style:TextStyle(fontSize:18,fontWeight:FontWeight.bold))),const SizedBox(height:20),const Card(color:Color(0xFF151D31),child:ListTile(leading:Icon(Icons.stars,color:Color(0xFFFFD479)),title:Text('Points'),subtitle:Text('0 points'))),const Card(color:Color(0xFF151D31),child:ListTile(leading:Icon(Icons.emoji_events,color:Color(0xFF9EA4FF)),title:Text('Badges'),subtitle:Text('Your achievements will appear here'))),const Card(color:Color(0xFF151D31),child:ListTile(leading:Icon(Icons.settings),title:Text('Settings'),subtitle:Text('App preferences'))]);}
