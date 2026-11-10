@@ -1,30 +1,335 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
-void main()=>runApp(const BhushanScienceApp());
-const bg=Color(0xFF0B1020), panel=Color(0xFF151D31), accent=Color(0xFF9EA4FF);
-class BhushanScienceApp extends StatelessWidget {
- const BhushanScienceApp({super.key});
- @override Widget build(BuildContext context)=>MaterialApp(title:'Bhushan Science',debugShowCheckedModeBanner:false,theme:ThemeData(colorScheme:ColorScheme.fromSeed(seedColor:accent,brightness:Brightness.dark),scaffoldBackgroundColor:bg,useMaterial3:true),home:const Shell());
+void main() => runApp(const BhushanScienceApp());
+
+const _bg = Color(0xFF0B1020);
+const _panel = Color(0xFF151D31);
+const _accent = Color(0xFF9EA4FF);
+
+class BhushanScienceApp extends StatefulWidget {
+  const BhushanScienceApp({super.key});
+  @override
+  State<BhushanScienceApp> createState() => _BhushanScienceAppState();
 }
-class Shell extends StatefulWidget {const Shell({super.key});@override State<Shell> createState()=>_ShellState();}
-class _ShellState extends State<Shell>{int tab=0;final pages=const[HomePage(),LearningPage(),PracticePage(),FocusPage(),AnalyticsPage()];@override Widget build(BuildContext context)=>Scaffold(body:SafeArea(child:pages[tab]),bottomNavigationBar:NavigationBar(backgroundColor:const Color(0xFF121A2D),selectedIndex:tab,onDestinationSelected:(v)=>setState(()=>tab=v),destinations:const[NavigationDestination(icon:Icon(Icons.home),label:'Home'),NavigationDestination(icon:Icon(Icons.menu_book),label:'Learn'),NavigationDestination(icon:Icon(Icons.quiz),label:'Practice'),NavigationDestination(icon:Icon(Icons.timer),label:'Focus'),NavigationDestination(icon:Icon(Icons.insights),label:'Progress')]));}
-class HomePage extends StatelessWidget{const HomePage({super.key});@override Widget build(BuildContext context)=>ListView(padding:const EdgeInsets.all(20),children:[
- const Row(children:[CircleAvatar(backgroundColor:Color(0xFF282F59),child:Icon(Icons.school,color:accent)),SizedBox(width:12),Expanded(child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('BHUSHAN SCIENCE',style:TextStyle(fontWeight:FontWeight.bold,letterSpacing:1)),Text('Nursing learning companion',style:TextStyle(color:Colors.white60))])),Icon(Icons.notifications_none)]),
- const SizedBox(height:22),Container(padding:const EdgeInsets.all(20),decoration:BoxDecoration(gradient:const LinearGradient(colors:[Color(0xFF343B78),Color(0xFF20294A)]),borderRadius:BorderRadius.circular(22)),child:const Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Learn smarter. Care better. ✨',style:TextStyle(fontSize:22,fontWeight:FontWeight.bold)),SizedBox(height:8),Text('Concept clarity, structured learning and practice in one place.',style:TextStyle(color:Colors.white70)),SizedBox(height:16),Text('Your daily learning journey starts here.') ])),
- const SizedBox(height:20),const Text('Learning tracks',style:TextStyle(fontSize:18,fontWeight:FontWeight.bold)),const SizedBox(height:10),
- const Wrap(spacing:12,runSpacing:12,children:[Tile(icon:Icons.medical_services,title:'BSc Nursing',sub:'Semesters 1–8'),Tile(icon:Icons.health_and_safety,title:'GNM Nursing',sub:'Years 1–3'),Tile(icon:Icons.library_books,title:'Syllabus map',sub:'Subjects & chapters'),Tile(icon:Icons.auto_awesome,title:'Smart revision',sub:'Review topics')]),
- const SizedBox(height:20),const Text('Continue learning',style:TextStyle(fontSize:18,fontWeight:FontWeight.bold)),const SizedBox(height:8),
- Card(color:panel,child:ListTile(leading:const CircleAvatar(backgroundColor:Color(0xFF282F59),child:Icon(Icons.favorite_outline,color:accent)),title:const Text('Anatomy • Cardiovascular system'),subtitle:const Text('Concept lesson · notes · recall'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const LessonPage(topic:'Cardiovascular system')))),
- const SizedBox(height:14),const Text('Study tip: try recalling the key points before checking your notes. Revisit topics over several days.',style:TextStyle(color:Colors.white60))
- ]);}
-class Tile extends StatelessWidget{final IconData icon;final String title,sub;const Tile({super.key,required this.icon,required this.title,required this.sub});@override Widget build(BuildContext context)=>Container(width:MediaQuery.of(context).size.width/2-27,padding:const EdgeInsets.all(16),decoration:BoxDecoration(color:panel,borderRadius:BorderRadius.circular(18),border:Border.all(color:Colors.white10)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Icon(icon,color:accent,size:28),const SizedBox(height:12),Text(title,style:const TextStyle(fontWeight:FontWeight.bold)),const SizedBox(height:4),Text(sub,style:const TextStyle(color:Colors.white60,fontSize:12))]));}
-class LearningPage extends StatefulWidget{const LearningPage({super.key});@override State<LearningPage> createState()=>_LearningPageState();}
-class _LearningPageState extends State<LearningPage>{String course='BSc Nursing';@override Widget build(BuildContext context){final stages=course=='BSc Nursing'?List.generate(8,(i)=>'Semester '+(i+1).toString()):List.generate(3,(i)=>'Year '+(i+1).toString();final subs=['Anatomy','Physiology','Nutrition','Nursing Foundation','Microbiology'];return ListView(padding:const EdgeInsets.all(20),children:[const Text('Structured learning',style:TextStyle(fontSize:26,fontWeight:FontWeight.bold)),const SizedBox(height:8),const Text('Browse course → subject → topic',style:TextStyle(color:Colors.white60)),const SizedBox(height:16),SegmentedButton<String>(segments:const[ButtonSegment(value:'BSc Nursing',label:Text('BSc Nursing')),ButtonSegment(value:'GNM Nursing',label:Text('GNM Nursing'))],selected:{course},onSelectionChanged:(s)=>setState(()=>course=s.first)),const SizedBox(height:12),...stages.map((stage)=>Card(color:panel,child:ExpansionTile(leading:const Icon(Icons.folder_open,color:accent),title:Text(stage),subtitle:const Text('Subjects · chapters · practice'),children:subs.map((subject)=>ListTile(contentPadding:const EdgeInsets.only(left:58),title:Text(subject),subtitle:const Text('Concepts, notes and revision'),trailing:const Icon(Icons.chevron_right),onTap:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>LessonPage(topic:subject))))).toList()))]);}}
-class LessonPage extends StatefulWidget{final String topic;const LessonPage({super.key,required this.topic});@override State<LessonPage> createState()=>_LessonPageState();}
-class _LessonPageState extends State<LessonPage>{bool bookmark=false;@override Widget build(BuildContext context)=>Scaffold(appBar:AppBar(title:Text(widget.topic),actions:[IconButton(onPressed:()=>setState(()=>bookmark=!bookmark),icon:Icon(bookmark?Icons.bookmark:Icons.bookmark_border))]),body:ListView(padding:const EdgeInsets.all(20),children:[Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:const Color(0xFF20294A),borderRadius:BorderRadius.circular(18)),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('CONCEPT LESSON',style:TextStyle(color:accent,fontWeight:FontWeight.bold)),const SizedBox(height:10),Text(widget.topic,style:const TextStyle(fontSize:24,fontWeight:FontWeight.bold)),const SizedBox(height:8),const Text('Learn the concept in clear steps, connect it to practical context, and check your recall.',style:TextStyle(color:Colors.white70))])),const SizedBox(height:12),...['Concept overview','Key terms & concise notes','Visual learning section','Recall checkpoint'].map((s)=>Card(color:panel,child:ListTile(leading:const Icon(Icons.play_circle_outline,color:accent),title:Text(s),subtitle:const Text('Lesson content placeholder for the connected library')))),const SizedBox(height:12),FilledButton.icon(onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const PracticePage())),icon:const Icon(Icons.quiz),label:const Text('Practise this topic'))]));}
-class PracticePage extends StatefulWidget{const PracticePage({super.key});@override State<PracticePage> createState()=>_PracticePageState();}
-class _PracticePageState extends State<PracticePage>{int? choice;bool checked=false;int n=0;final qs=[('Which organ primarily pumps blood throughout the body?',['Lungs','Heart','Kidney','Liver'],1),('Which vessels generally carry blood away from the heart?',['Veins','Capillaries','Arteries','Lymph vessels'],2)];@override Widget build(BuildContext context){final q=qs[n%qs.length];return Padding(padding:const EdgeInsets.all(20),child:Column(crossAxisAlignment:CrossAxisAlignment.start,children:[const Text('Practice & mastery',style:TextStyle(fontSize:26,fontWeight:FontWeight.bold)),const SizedBox(height:8),const Text('Sample questions with immediate feedback',style:TextStyle(color:Colors.white60)),const SizedBox(height:18),Text('Question '+(n+1).toString(),style:const TextStyle(color:accent)),const SizedBox(height:10),Text(q.$1,style:const TextStyle(fontSize:20,fontWeight:FontWeight.w600)),const SizedBox(height:12),...q.$2.asMap().entries.map((e)=>Card(color:choice==e.key?const Color(0xFF343B78):panel,child:RadioListTile<int>(value:e.key,groupValue:choice,title:Text(e.value),onChanged:checked?null:(v)=>setState(()=>choice=v)))),if(checked)Container(padding:const EdgeInsets.all(14),decoration:BoxDecoration(color:const Color(0xFF1B352B),borderRadius:BorderRadius.circular(12)),child:Text(choice==q.$3?'Correct! Well done.':'Correct answer: '+q.$2[q.$3]+'. Review this concept before the next question.',style:const TextStyle(fontWeight:FontWeight.bold))),const Spacer(),Row(children:[Expanded(child:FilledButton(onPressed:choice==null?null:()=>setState(()=>checked=true),child:Text(checked?'Checked':'Check answer'))),if(checked)...[const SizedBox(width:10),Expanded(child:OutlinedButton(onPressed:()=>setState((){n++;choice=null;checked=false;}),child:const Text('Next')))]])]));}}
-class FocusPage extends StatefulWidget{const FocusPage({super.key});@override State<FocusPage> createState()=>_FocusPageState();}
-class _FocusPageState extends State<FocusPage>{int sec=1500;Timer? timer;bool active=false;void start(){if(active)return;setState(()=>active=true);timer=Timer.periodic(const Duration(seconds:1),(t){if(sec<=1){t.cancel();setState((){sec=0;active=false;});}else setState(()=>sec--);});}void reset(){timer?.cancel();setState(()=>{sec=1500,active=false});}@override void dispose(){timer?.cancel();super.dispose();}@override Widget build(BuildContext context){final m=(sec~/60).toString().padLeft(2,'0');final s=(sec%60).toString().padLeft(2,'0');return Center(child:Column(mainAxisAlignment:MainAxisAlignment.center,children:[const Text('Focus session',style:TextStyle(fontSize:26,fontWeight:FontWeight.bold)),const SizedBox(height:8),const Text('Pomodoro · 25 min',style:TextStyle(color:Colors.white60)),const SizedBox(height:24),Container(width:230,height:230,decoration:BoxDecoration(shape:BoxShape.circle,border:Border.all(color:accent,width:8),color:panel),child:Center(child:Text(m+':'+s,style:const TextStyle(fontSize:48,fontWeight:FontWeight.bold)))),const SizedBox(height:24),Wrap(spacing:10,children:[FilledButton.icon(onPressed:sec==0?reset:(active?(){timer?.cancel();setState(()=>active=false);}:start),icon:Icon(active?Icons.pause:Icons.play_arrow),label:Text(active?'Pause':sec==0?'Restart':'Start')),OutlinedButton.icon(onPressed:reset,icon:const Icon(Icons.refresh),label:const Text('Reset'))]),const SizedBox(height:18),const Text('Points and session history require account sync.',style:TextStyle(color:Colors.white54))]));}}
-class AnalyticsPage extends StatelessWidget{const AnalyticsPage({super.key});@override Widget build(BuildContext context)=>ListView(padding:const EdgeInsets.all(20),children:[const Text('Learning analytics',style:TextStyle(fontSize:26,fontWeight:FontWeight.bold)),const SizedBox(height:8),const Text('Track practice, revisit weak areas and build a routine.',style:TextStyle(color:Colors.white60)),const SizedBox(height:18),Container(padding:const EdgeInsets.all(18),decoration:BoxDecoration(color:panel,borderRadius:BorderRadius.circular(18)),child:const Column(crossAxisAlignment:CrossAxisAlignment.start,children:[Text('Progress overview',style:TextStyle(fontWeight:FontWeight.bold)),SizedBox(height:16),LinearProgressIndicator(value:0),SizedBox(height:8),Text('No progress synced yet · Start a lesson or practice set',style:TextStyle(color:Colors.white60,fontSize:12))])),const SizedBox(height:12),const Card(color:panel,child:ListTile(leading:Icon(Icons.stars,color:Color(0xFFFFD479)),title:Text('Points & badges'),subtitle:Text('Profile sync pending'))),const Card(color:panel,child:ListTile(leading:Icon(Icons.bookmark,color:accent),title:Text('Saved lessons'),subtitle:Text('Bookmarks saved locally in session'))),const Card(color:panel,child:ListTile(leading:Icon(Icons.auto_awesome,color:accent),title:Text('Smart revision'),subtitle:Text('Next step: connect quiz analytics to recommendation engine')))]);}
+
+class _BhushanScienceAppState extends State<BhushanScienceApp> {
+  String language = 'Hinglish';
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+        title: 'Bhushan Science',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: _accent, brightness: Brightness.dark),
+          scaffoldBackgroundColor: _bg,
+          useMaterial3: true,
+        ),
+        home: AppShell(
+          language: language,
+          onLanguageChanged: (value) => setState(() => language = value),
+        ),
+      );
+}
+
+class AppShell extends StatefulWidget {
+  final String language;
+  final ValueChanged<String> onLanguageChanged;
+  const AppShell({super.key, required this.language, required this.onLanguageChanged});
+  @override
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  int index = 0;
+  @override
+  Widget build(BuildContext context) {
+    final pages = [
+      HomePage(language: widget.language),
+      LearningPage(),
+      PracticePage(),
+      FocusPage(),
+      AdminSettingsPage(language: widget.language, onLanguageChanged: widget.onLanguageChanged),
+    ];
+    return Scaffold(
+      body: SafeArea(child: pages[index]),
+      bottomNavigationBar: NavigationBar(
+        backgroundColor: const Color(0xFF121A2D),
+        selectedIndex: index,
+        onDestinationSelected: (value) => setState(() => index = value),
+        destinations: const [
+          NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
+          NavigationDestination(icon: Icon(Icons.menu_book), label: 'Learn'),
+          NavigationDestination(icon: Icon(Icons.quiz), label: 'Practice'),
+          NavigationDestination(icon: Icon(Icons.timer), label: 'Focus'),
+          NavigationDestination(icon: Icon(Icons.admin_panel_settings), label: 'Admin'),
+        ],
+      ),
+    );
+  }
+}
+
+class HomePage extends StatelessWidget {
+  final String language;
+  const HomePage({super.key, required this.language});
+  @override
+  Widget build(BuildContext context) {
+    final hinglish = language == 'Hinglish';
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        const Row(children: [
+          CircleAvatar(backgroundColor: Color(0xFF282F59), child: Icon(Icons.school, color: _accent)),
+          SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text('BHUSHAN SCIENCE', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
+            Text('Nursing learning companion', style: TextStyle(color: Colors.white60)),
+          ])),
+          Icon(Icons.notifications_none),
+        ]),
+        const SizedBox(height: 22),
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [Color(0xFF343B78), Color(0xFF20294A)]),
+            borderRadius: BorderRadius.circular(22),
+          ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(hinglish ? 'Padhai smart karo ✨' : 'Learn smarter ✨',
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(hinglish
+                ? 'Concept samjho, practice karo—ratta maarne ki zaroorat nahi.'
+                : 'Build concept clarity with structured lessons and practice.',
+                style: const TextStyle(color: Colors.white70)),
+          ]),
+        ),
+        const SizedBox(height: 20),
+        const Text('Learning tracks', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 10),
+        const Wrap(spacing: 12, runSpacing: 12, children: [
+          HomeTile(icon: Icons.medical_services, title: 'BSc Nursing', sub: 'Semesters 1–8'),
+          HomeTile(icon: Icons.health_and_safety, title: 'GNM Nursing', sub: 'Years 1–3'),
+          HomeTile(icon: Icons.library_books, title: 'Syllabus map', sub: 'Subjects & chapters'),
+          HomeTile(icon: Icons.auto_awesome, title: 'Smart revision', sub: 'Review concepts'),
+        ]),
+        const SizedBox(height: 18),
+        Card(color: _panel, child: ListTile(
+          leading: const Icon(Icons.support_agent, color: _accent),
+          title: Text(hinglish ? 'AI Study Support' : 'AI Study Support'),
+          subtitle: Text(hinglish ? 'Doubt bhejo—AI connection configure hona baaki hai.' : 'AI service connection is awaiting configuration.'),
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => SupportPage(language: language))),
+        )),
+        const SizedBox(height: 12),
+        Text(hinglish ? 'Study tip: pehle khud recall karo, phir notes check karo.' : 'Study tip: recall first, then check your notes.',
+            style: const TextStyle(color: Colors.white60)),
+      ],
+    );
+  }
+}
+
+class HomeTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String sub;
+  const HomeTile({super.key, required this.icon, required this.title, required this.sub});
+  @override
+  Widget build(BuildContext context) => Container(
+        width: MediaQuery.of(context).size.width / 2 - 27,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: _panel, borderRadius: BorderRadius.circular(18), border: Border.all(color: Colors.white10)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Icon(icon, color: _accent, size: 28),
+          const SizedBox(height: 12),
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(sub, style: const TextStyle(color: Colors.white60, fontSize: 12)),
+        ]),
+      );
+}
+
+class LearningPage extends StatefulWidget {
+  const LearningPage({super.key});
+  @override
+  State<LearningPage> createState() => _LearningPageState();
+}
+class _LearningPageState extends State<LearningPage> {
+  String course = 'BSc Nursing';
+  @override
+  Widget build(BuildContext context) {
+    final stages = course == 'BSc Nursing'
+        ? List.generate(8, (i) => 'Semester ${i + 1}')
+        : List.generate(3, (i) => 'Year ${i + 1}');
+    const subjects = ['Anatomy', 'Physiology', 'Nutrition', 'Nursing Foundation', 'Microbiology'];
+    return ListView(padding: const EdgeInsets.all(20), children: [
+      const Text('Structured learning', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 12),
+      SegmentedButton<String>(
+        segments: const [ButtonSegment(value: 'BSc Nursing', label: Text('BSc Nursing')), ButtonSegment(value: 'GNM Nursing', label: Text('GNM Nursing'))],
+        selected: {course},
+        onSelectionChanged: (selection) => setState(() => course = selection.first),
+      ),
+      const SizedBox(height: 12),
+      ...stages.map((stage) => Card(
+        color: _panel,
+        child: ExpansionTile(
+          leading: const Icon(Icons.folder_open, color: _accent),
+          title: Text(stage),
+          subtitle: const Text('Subjects · topics · practice'),
+          children: subjects.map((subject) => ListTile(
+            title: Text(subject),
+            subtitle: const Text('Starter content — official curriculum mapping pending'),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => LessonPage(topic: subject))),
+          )).toList(),
+        ),
+      )),
+    ]);
+  }
+}
+
+class LessonPage extends StatelessWidget {
+  final String topic;
+  const LessonPage({super.key, required this.topic});
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: Text(topic)),
+    body: ListView(padding: const EdgeInsets.all(20), children: [
+      Text(topic, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 10),
+      const Text('Concept explanation and curriculum-backed lesson content will appear here once the content service is connected.'),
+      const SizedBox(height: 18),
+      const Card(color: _panel, child: ListTile(leading: Icon(Icons.notes, color: _accent), title: Text('Notes'), subtitle: Text('Lesson library connection pending'))),
+    ]),
+  );
+}
+
+class PracticePage extends StatefulWidget {
+  const PracticePage({super.key});
+  @override
+  State<PracticePage> createState() => _PracticePageState();
+}
+class _PracticePageState extends State<PracticePage> {
+  int? answer;
+  bool checked = false;
+  final options = ['Lungs', 'Heart', 'Kidney', 'Liver'];
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.all(20),
+    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('Practice & mastery', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 18),
+      const Text('Sample question', style: TextStyle(color: _accent)),
+      const SizedBox(height: 10),
+      const Text('Which organ primarily pumps blood throughout the body?', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600)),
+      const SizedBox(height: 12),
+      ...options.asMap().entries.map((entry) => Card(
+        color: answer == entry.key ? const Color(0xFF343B78) : _panel,
+        child: ListTile(
+          title: Text(entry.value),
+          leading: Radio<int>(value: entry.key, groupValue: answer, onChanged: checked ? null : (value) => setState(() => answer = value)),
+        ),
+      )),
+      if (checked) Text(answer == 1 ? 'Correct! Nice work.' : 'Correct answer: Heart. Review the concept and try again.', style: const TextStyle(fontWeight: FontWeight.bold)),
+      const Spacer(),
+      Row(children: [
+        Expanded(child: FilledButton(onPressed: answer == null ? null : () => setState(() => checked = true), child: Text(checked ? 'Answer checked' : 'Check answer'))),
+        const SizedBox(width: 10),
+        Expanded(child: OutlinedButton(onPressed: () => setState(() { answer = null; checked = false; }), child: const Text('Reset'))),
+      ]),
+    ]),
+  );
+}
+
+class FocusPage extends StatefulWidget {
+  const FocusPage({super.key});
+  @override
+  State<FocusPage> createState() => _FocusPageState();
+}
+class _FocusPageState extends State<FocusPage> {
+  int seconds = 1500;
+  Timer? timer;
+  bool running = false;
+  void start() {
+    if (running || seconds <= 0) return;
+    setState(() => running = true);
+    timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (seconds <= 1) {
+        t.cancel();
+        setState(() { seconds = 0; running = false; });
+      } else {
+        setState(() => seconds--);
+      }
+    });
+  }
+  void reset() {
+    timer?.cancel();
+    setState(() { seconds = 1500; running = false; });
+  }
+  @override
+  void dispose() { timer?.cancel(); super.dispose(); }
+  @override
+  Widget build(BuildContext context) {
+    final time = '${(seconds ~/ 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}';
+    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+      const Text('Focus session', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 18),
+      Container(width: 220, height: 220, decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: _accent, width: 8), color: _panel), child: Center(child: Text(time, style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold)))),
+      const SizedBox(height: 24),
+      Wrap(spacing: 10, children: [
+        FilledButton.icon(onPressed: seconds == 0 ? reset : (running ? () { timer?.cancel(); setState(() => running = false); } : start), icon: Icon(running ? Icons.pause : Icons.play_arrow), label: Text(running ? 'Pause' : seconds == 0 ? 'Restart' : 'Start')),
+        OutlinedButton.icon(onPressed: reset, icon: const Icon(Icons.refresh), label: const Text('Reset')),
+      ]),
+    ]));
+  }
+}
+
+class AdminSettingsPage extends StatefulWidget {
+  final String language;
+  final ValueChanged<String> onLanguageChanged;
+  const AdminSettingsPage({super.key, required this.language, required this.onLanguageChanged});
+  @override
+  State<AdminSettingsPage> createState() => _AdminSettingsPageState();
+}
+class _AdminSettingsPageState extends State<AdminSettingsPage> {
+  double sessionMinutes = 25;
+  double refreshMinutes = 1;
+  bool enableAiSupport = true;
+  bool enableFriendlyTone = true;
+  String tone = 'Frank & friendly';
+  @override
+  Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(20), children: [
+    const Text('Admin configuration', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+    const SizedBox(height: 6),
+    const Text('UI controls preview. Secure admin authentication and server-side sync must be connected before these settings can govern all users.', style: TextStyle(color: Colors.orangeAccent)),
+    const SizedBox(height: 18),
+    const Text('Default language', style: TextStyle(fontWeight: FontWeight.bold)),
+    DropdownButton<String>(value: widget.language, isExpanded: true, items: const ['Hinglish', 'Hindi', 'English'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) { if (v != null) widget.onLanguageChanged(v); }),
+    const Divider(),
+    Text('Focus duration: ${sessionMinutes.round()} minutes'),
+    Slider(value: sessionMinutes, min: 5, max: 90, divisions: 17, label: '${sessionMinutes.round()} min', onChanged: (v) => setState(() => sessionMinutes = v)),
+    Text('Config refresh interval: ${refreshMinutes.round()} minute(s)'),
+    Slider(value: refreshMinutes, min: 1, max: 10, divisions: 9, label: '${refreshMinutes.round()} min', onChanged: (v) => setState(() => refreshMinutes = v)),
+    SwitchListTile(title: const Text('AI study support'), subtitle: const Text('Switch UI option; AI provider connection still required'), value: enableAiSupport, onChanged: (v) => setState(() => enableAiSupport = v),
+    SwitchListTile(title: const Text('Friendly frank voice'), value: enableFriendlyTone, onChanged: (v) => setState(() => enableFriendlyTone = v),
+    const SizedBox(height: 8),
+    const Text('Assistant tone', style: TextStyle(fontWeight: FontWeight.bold)),
+    DropdownButton<String>(value: tone, isExpanded: true, items: const ['Frank & friendly', 'Professional', 'Playful teasing'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) { if (v != null) setState(() => tone = v); }),
+    const SizedBox(height: 12),
+    FilledButton.icon(onPressed: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Preview settings updated locally. Server sync is not connected yet.'))), icon: const Icon(Icons.save), label: const Text('Apply preview settings')),
+  ]);
+}
+
+class SupportPage extends StatelessWidget {
+  final String language;
+  const SupportPage({super.key, required this.language});
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(title: const Text('Study Support')),
+    body: Padding(padding: const EdgeInsets.all(20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('AI support setup', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+      const SizedBox(height: 12),
+      Text(language == 'Hinglish'
+          ? 'Abhi AI provider connect nahi hai. Backend endpoint aur securely stored API key configure hone ke baad doubts ka intelligent answer, explanation aur language matching enable hoga.'
+          : 'The AI provider is not connected yet. Configure a backend endpoint and securely stored API key to enable intelligent explanations and language matching.'),
+    ])),
+  );
+}
