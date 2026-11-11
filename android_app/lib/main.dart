@@ -838,7 +838,7 @@ class _SupportPageState extends State<SupportPage> {
     final isGreeting = q == 'hi' || q == 'hello' || q == 'hey' || q == 'namaste';
     final hasUsefulAnswer = q.contains('dose') || q.contains('dosage') || q.contains('medicine') || q.contains('medication') || q.contains('drug') || q.contains('insulin') || q.contains('iv ') || q.contains('injection') || q.contains('infusion') || q.contains('vital') || q.contains('spo2') || q.contains('oxygen') || q.contains('infection') || q.contains('sterile') || q.contains('hand hygiene') || q.contains('heart') || q.contains('cardiac') || q.contains('blood') || q.contains('anatomy') || q.contains('physiology') || q.contains('study') || q.contains('plan') || q.contains('schedule') || q.contains('padh') || q.contains('quiz') || q.contains('mcq') || q.contains('question');
     if (hinglish && hasUsefulAnswer && !isGreeting) {
-      response = '${roastReply(raw)}\\n\\n${response}';
+      response = '${roastReply(raw)}\n\n$response';
     }
     if (q.contains('damn') || q.contains('stupid')) {
       response = hinglish ? 'Arre frank mode hai, disrespect mode nahi 😏 Chalo doubt pe aate hain.' : response;
