@@ -17,7 +17,7 @@ from telegram.ext import (
 from telegram.constants import ParseMode
 from telegram.error import Conflict, InvalidToken
 from flask import Flask
-from update_api import update_api
+from update_api import update_api  # Versioned app-content sync API
 import pytz
 from instamart_offer import instamart_start, instamart_input, instamart_command
 
