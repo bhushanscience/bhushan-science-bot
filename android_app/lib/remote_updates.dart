@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 const String defaultUpdateServer = 'https://bhushan-science-bot.onrender.com';
 
 class RemoteUpdateService {
+  static final ValueNotifier<Map<String, dynamic>?> manifest = ValueNotifier(null);
   static const _cacheKey = 'bhushan.remote_update_manifest.v1';
 
   static Future<Map<String, dynamic>> fetchManifest(String baseUrl) async {
@@ -28,6 +29,7 @@ class RemoteUpdateService {
     final manifest = Map<String, dynamic>.from(decoded);
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_cacheKey, jsonEncode(manifest));
+    RemoteUpdateService.manifest.value = manifest;
     return manifest;
   }
 
@@ -37,13 +39,18 @@ class RemoteUpdateService {
     if (raw == null) return null;
     try {
       final decoded = jsonDecode(raw);
-      return decoded is Map<String, dynamic> ? decoded : null;
+      if (decoded is Map<String, dynamic>) {
+        manifest.value = decoded;
+        return decoded;
+      }
+      return null;
     } catch (_) {
       return null;
     }
   }
 
   static Future<void> syncOnStartup() async {
+    await readCachedManifest();
     try {
       await fetchManifest(defaultUpdateServer);
     } catch (_) {
