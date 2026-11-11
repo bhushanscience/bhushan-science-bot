@@ -108,10 +108,10 @@ class HomePage extends StatelessWidget {
                 style: const TextStyle(color: Colors.white70)),
           ]),
         ),
-        FutureBuilder<Map<String, dynamic>?>(
-          future: RemoteUpdateService.readCachedManifest(),
-          builder: (context, snapshot) {
-            final payload = snapshot.data?['payload'];
+        ValueListenableBuilder<Map<String, dynamic>?>(
+          valueListenable: RemoteUpdateService.manifest,
+          builder: (context, manifest, child) {
+            final payload = manifest?['payload'];
             final announcement = payload is Map ? payload['announcement']?.toString() : null;
             if (announcement == null || announcement.trim().isEmpty) return const SizedBox.shrink();
             return Card(
