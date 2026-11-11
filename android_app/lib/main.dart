@@ -100,10 +100,14 @@ class _AppShellState extends State<AppShell> {
           ),
         ),
       );
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
+        final detail = error.toString();
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not verify credentials. Check your internet connection.')),
+          SnackBar(
+            content: Text('Admin login network error: ${error.runtimeType}. ${detail.length > 180 ? detail.substring(0, 180) : detail}'),
+            duration: const Duration(seconds: 8),
+          ),
         );
       }
     }
