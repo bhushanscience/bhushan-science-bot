@@ -31,6 +31,8 @@ jobs:
         with:
           channel: stable
           cache: true
+      - name: Generate missing Android platform files
+        run: flutter create --platforms=android --project-name bhushan_science_app .
       - name: Install dependencies
         run: flutter pub get
       - name: Analyze
