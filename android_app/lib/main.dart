@@ -628,6 +628,94 @@ class _SupportPageState extends State<SupportPage> {
     return '$opener $jab. $nudge $closer';
   }
 
+  // Normal conversational reply engine: 50 x 50 x 20 = 50,000 combinations.
+  // These are friendly, non-roast responses for ordinary chat and unknown topics.
+  String normalTalkReply(String raw) {
+    const openers = [
+      'Achha, samajh gaya.', 'Haan, bilkul.', 'Theek hai, suno.', 'Oh, interesting!',
+      'Chalo, baat karte hain.', 'Arre haan.', 'Good point.', 'No worries.',
+      'Bilkul, koi tension nahi.', 'Sahi hai.', 'Hmm, ek minute.', 'Fair enough.',
+      'Accha question hai.', 'Got it.', 'Main samajh raha hoon.', 'Chalo, simple rakhte hain.',
+      'Haan, ye bhi sahi hai.', 'Nice!', 'Okay, noted.', 'Baat toh sahi hai.',
+      'Aao, isko clear karte hain.', 'Sure, sun raha hoon.', 'Koi dikkat nahi.',
+      'That makes sense.', 'Chalo, aage badhte hain.', 'Haan ji.', 'Samajh aaya.',
+      'Interesting baat hai.', 'Bilkul possible hai.', 'Ek friendly suggestion hai.',
+      'Theek, no problem.', 'Chalo dekhte hain.', 'Haan, batao.', 'Good to know.',
+      'Main help karta hoon.', 'Relax, aaram se.', 'Koi jaldi nahi.', 'Sahi pakde hain.',
+      'Chalo, seedhi baat.', 'Thanks batane ke liye.', 'Oh, achha!', 'Understood.',
+      'Haan, ye kar sakte hain.', 'Acha, context mil gaya.', 'Let’s figure it out.',
+      'Bilkul, step by step.', 'Koi baat nahi.', 'Chalo, try karte hain.',
+      'Haan, main yahin se start karta hoon.', 'Sounds good.'
+    ];
+    const middles = [
+      'Tum apni baat aage batao, main dhyan se follow karunga.',
+      'Agar thoda context doge toh main zyada useful jawab de paunga.',
+      'Isko hum simple steps mein sort kar sakte hain.',
+      'Jo part confusing lag raha hai, bas wahi share karo.',
+      'Main bina judge kiye tumhari baat samajhne ki koshish karunga.',
+      'Ek chhota example doge toh baat aur clear ho jayegi.',
+      'Aaram se socho; har cheez ka answer turant dena zaroori nahi.',
+      'Agar chaho toh main short answer se shuru kar sakta hoon.',
+      'Pehle main basic point clear karta hoon, phir detail mein jayenge.',
+      'Tum jis language mein comfortable ho, usi mein baat kar sakte ho.',
+      'Aaj ka din kaisa ja raha hai? Sab manageable hai?',
+      'Kuch specific poochna hai ya bas casual chat karni hai?',
+      'Main options ko compare karke simple difference bata sakta hoon.',
+      'Ek baar goal clear ho jaye, next step choose karna easy hoga.',
+      'Agar meri baat unclear ho toh mujhe correct kar dena.',
+      'Chhoti shuruaat bhi progress hoti hai.',
+      'Koi pressure nahi; jitna share karna ho utna hi batao.',
+      'Main facts aur assumptions ko alag-alag rakhunga.',
+      'Is topic par ek practical example helpful rahega.',
+      'Tumhare question ka main point pakadte hain.',
+      'Pehle priority decide karte hain, baaki baad mein.',
+      'Agar tum chaho toh main ise bullet points mein samjha dunga.',
+      'Baat ko unnecessarily complicated nahi banate.',
+      'Jo already pata hai woh bata do, wahi se continue karenge.',
+      'Ek clear question se hum jaldi solution tak pahunch sakte hain.',
+      'Main concise rakhunga, lekin important detail skip nahi karunga.',
+      'Agar ye study-related hai toh topic ka naam bhi bhej dena.',
+      'Thoda break lena bhi kabhi-kabhi useful hota hai.',
+      'Har doubt valid hai; poochhne mein hesitation mat rakho.',
+      'Main pehle tumhari exact need samajhna chahta hoon.',
+      'Iska ek easy aur ek detailed explanation de sakta hoon.',
+      'Chalo, jo sabse urgent hai usse shuru karte hain.',
+      'Agar tum example bhejoge toh main usi par explain karunga.',
+      'Koi fixed format zaroori nahi; normal message bhejo.',
+      'Main tumhe practical next step suggest kar sakta hoon.',
+      'Agar baat personal hai toh jitna comfortable ho utna hi share karo.',
+      'Ek-ek point lete hain, sab ek saath nahi.',
+      'Main answer ko straightforward rakhne ki koshish karunga.',
+      'Kuch aur detail add karni ho toh kar sakte ho.',
+      'Chalo, pehle confusion ka source identify karte hain.',
+      'Tumhari baat sun kar uske hisaab se respond karunga.',
+      'Agar exact answer na pata ho toh main clearly bataunga.',
+      'Simple language mein samjhana bilkul possible hai.',
+      'Hum isko calmly handle kar sakte hain.',
+      'Ek quick recap bhi de sakta hoon.',
+      'Tum bas topic bhejo, main wahin se start karunga.',
+      'Agar ye urgent clinical matter hai toh qualified staff ko involve karna.',
+      'Main safe aur reliable information ko priority dunga.',
+      'Thoda aur bataoge toh response better tailor hoga.',
+      'Chalo, conversation ko yahin se aage le chalte hain.'
+    ];
+    const endings = [
+      'Kya scene hai?', 'Aur batao, kya chal raha hai?', 'Main sun raha hoon.',
+      'Aage kya karna hai?', 'Shuru karein?', 'Kis part se start karein?',
+      'Tum batao.', 'No rush.', 'Step by step ho jayega.',
+      'Jo convenient ho woh bhejo.', 'I’m here to help with the question.',
+      'Aaram se.', 'Batao, main follow kar raha hoon.',
+      'Chalo, next point?', 'Koi bhi doubt ho toh pooch lena.',
+      'Let’s keep it simple.', 'Theek rahega?', 'Ready when you are.',
+      'Ab tumhari baari.', 'Baat jaari rakho.'
+    ];
+    final hash = raw.codeUnits.fold(23, (a, b) => (a * 37 + b) & 0x7fffffff);
+    final opener = openers[hash % openers.length];
+    final middle = middles[(hash ~/ openers.length) % middles.length];
+    final ending = endings[(hash ~/ (openers.length * middles.length)) % endings.length];
+    return '$opener $middle $ending';
+  }
+
   String answerFor(String raw) {
     final q = raw.toLowerCase();
     final hinglish = widget.language == 'Hinglish';
@@ -658,7 +746,7 @@ class _SupportPageState extends State<SupportPage> {
     } else if (q.contains('help') || q.contains('support')) {
       response = hinglish ? 'Demo support mein Anatomy, Physiology, Heart/Blood, study planning aur sample MCQs cover hain. Specific doubt type karo.' : hindi ? 'डेमो सहायता Anatomy, Physiology, हृदय/रक्त, अध्ययन योजना और MCQ में मदद करती है।' : 'Demo support covers Anatomy, Physiology, heart/blood, study planning, and sample MCQs. Try a specific question.';
     } else {
-      response = hinglish ? '${roastReply(raw)} Try Anatomy, Physiology, heart, blood, study plan ya MCQ.' : hindi ? 'इस विषय का निश्चित उत्तर अभी उपलब्ध नहीं है। Anatomy, Physiology, हृदय, रक्त या अध्ययन योजना पूछें।' : 'I don’t have a fixed reply for that topic yet. Try Anatomy, Physiology, heart, blood, a study plan, or MCQs. This is a demo responder.';
+      response = hinglish ? normalTalkReply(raw) : hindi ? 'इस विषय का निश्चित उत्तर अभी उपलब्ध नहीं है। Anatomy, Physiology, हृदय, रक्त या अध्ययन योजना पूछें।' : 'I don’t have a fixed reply for that topic yet. Try Anatomy, Physiology, heart, blood, a study plan, or MCQs. This is a demo responder.';
     }
     final isGreeting = q == 'hi' || q == 'hello' || q == 'hey' || q == 'namaste';
     final hasUsefulAnswer = q.contains('dose') || q.contains('dosage') || q.contains('medicine') || q.contains('medication') || q.contains('drug') || q.contains('insulin') || q.contains('iv ') || q.contains('injection') || q.contains('infusion') || q.contains('vital') || q.contains('spo2') || q.contains('oxygen') || q.contains('infection') || q.contains('sterile') || q.contains('hand hygiene') || q.contains('heart') || q.contains('cardiac') || q.contains('blood') || q.contains('anatomy') || q.contains('physiology') || q.contains('study') || q.contains('plan') || q.contains('schedule') || q.contains('padh') || q.contains('quiz') || q.contains('mcq') || q.contains('question');
