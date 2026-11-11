@@ -1,7 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'remote_updates.dart';
 
-void main() => runApp(const BhushanScienceApp());
+void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(const BhushanScienceApp());
+  unawaited(RemoteUpdateService.syncOnStartup());
+}
 
 const _bg = Color(0xFF0B1020);
 const _panel = Color(0xFF151D31);
@@ -102,6 +107,22 @@ class HomePage extends StatelessWidget {
                 : 'Build concept clarity with structured lessons and practice.',
                 style: const TextStyle(color: Colors.white70)),
           ]),
+        ),
+        FutureBuilder<Map<String, dynamic>?>(
+          future: RemoteUpdateService.readCachedManifest(),
+          builder: (context, snapshot) {
+            final payload = snapshot.data?['payload'];
+            final announcement = payload is Map ? payload['announcement']?.toString() : null;
+            if (announcement == null || announcement.trim().isEmpty) return const SizedBox.shrink();
+            return Card(
+              color: _panel,
+              child: ListTile(
+                leading: const Icon(Icons.campaign_outlined, color: _accent),
+                title: const Text('From Bhushan Science'),
+                subtitle: Text(announcement),
+              ),
+            );
+          },
         ),
         const SizedBox(height: 20),
         const Text('Learning tracks', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -304,6 +325,20 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     const Text('Admin configuration', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
     const SizedBox(height: 6),
     const Text('UI controls preview. Secure admin authentication and server-side sync must be connected before these settings can govern all users.', style: TextStyle(color: Colors.orangeAccent)),
+    const SizedBox(height: 18),
+    Card(
+      color: _panel,
+      child: ListTile(
+        leading: const Icon(Icons.cloud_sync, color: _accent),
+        title: const Text('Remote content updates'),
+        subtitle: const Text('Publish content to all connected app installs'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const RemoteUpdatePage()),
+        ),
+      ),
+    ),
     const SizedBox(height: 18),
     const Text('Default language', style: TextStyle(fontWeight: FontWeight.bold)),
     DropdownButton<String>(value: widget.language, isExpanded: true, items: const ['Hinglish', 'Hindi', 'English'].map((v) => DropdownMenuItem(value: v, child: Text(v))).toList(), onChanged: (v) { if (v != null) widget.onLanguageChanged(v); }),
