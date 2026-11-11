@@ -1,9 +1,12 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:path/path.dart' as p;
+import 'package:sqflite/sqflite.dart';
 import 'remote_updates.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  unawaited(AutoReplyStore.database);
   runApp(const BhushanScienceApp());
   unawaited(RemoteUpdateService.syncOnStartup());
 }
@@ -11,6 +14,50 @@ void main() {
 const _bg = Color(0xFF0B1020);
 const _panel = Color(0xFF151D31);
 const _accent = Color(0xFF9EA4FF);
+
+/// Offline-first SQLite store for every demo assistant exchange.
+/// The database stays on the device; no Firebase/Supabase account is used.
+class AutoReplyStore {
+  static Database? _db;
+
+  static Future<Database> get database async {
+    if (_db != null) return _db!;
+    final root = await getDatabasesPath();
+    _db = await openDatabase(
+      p.join(root, 'bhushan_science.db'),
+      version: 1,
+      onCreate: (db, version) async {
+        await db.execute('''
+          CREATE TABLE auto_replies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_query TEXT NOT NULL,
+            bot_reply TEXT NOT NULL,
+            category VARCHAR(50) DEFAULT 'nursing',
+            sarcasm_score INT DEFAULT 10,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        ''');
+        await db.execute('CREATE INDEX idx_user_query ON auto_replies(user_query)');
+      },
+    );
+    return _db!;
+  }
+
+  static Future<void> save({required String query, required String reply, String category = 'nursing', int sarcasmScore = 10}) async {
+    final db = await database;
+    await db.insert('auto_replies', {
+      'user_query': query,
+      'bot_reply': reply,
+      'category': category,
+      'sarcasm_score': sarcasmScore.clamp(0, 10),
+    });
+  }
+
+  static Future<List<Map<String, Object?>>> recent({int limit = 50}) async {
+    final db = await database;
+    return db.query('auto_replies', orderBy: 'id DESC', limit: limit);
+  }
+}
 
 class BhushanScienceApp extends StatefulWidget {
   const BhushanScienceApp({super.key});
@@ -541,6 +588,12 @@ class _SupportPageState extends State<SupportPage> {
     String response;
     if (q.contains('hello') || q.contains('hi') || q.contains('hey') || q.contains('namaste')) {
       response = hinglish ? 'Oho, hello! Doubt lao—sirf “hi” se syllabus khatam nahi hoga 😄' : hindi ? 'नमस्ते! अपना सवाल पूछिए, पढ़ाई शुरू करें।' : 'Hello! Send your study doubt and let’s work on it.';
+    } else if (q.contains('dose') || q.contains('dosage') || q.contains('medicine') || q.contains('medication') || q.contains('drug') || q.contains('insulin') || q.contains('iv ') || q.contains('injection') || q.contains('infusion') || q.contains('vital') || q.contains('spo2') || q.contains('oxygen') || q.contains('infection control') || q.contains('sterile') || q.contains('hand hygiene')) {
+      response = hinglish
+          ? 'Clinical shortcut ka jugaad mat karo—patient koi MCQ practice sheet nahi hai. Medication/dose ke liye valid prescription, patient identity, allergies, current drug reference aur hospital policy verify karo; doubt ho toh administer karne se pehle registered nurse/clinical instructor ko escalate karo. Vitals ko patient ki condition aur local escalation chart ke context mein assess karo. Main bina patient-specific details aur approved protocol ke dose prescribe nahi karunga.'
+          : hindi
+              ? 'क्लिनिकल देखभाल में अनुमान न लगाएँ। दवा देने से पहले वैध प्रिस्क्रिप्शन, रोगी की पहचान, एलर्जी, वर्तमान औषधि-संदर्भ और अस्पताल नीति जाँचें। संदेह होने पर दवा देने से पहले वरिष्ठ पंजीकृत नर्स/क्लिनिकल प्रशिक्षक से पुष्टि करें।'
+              : 'Do not guess in clinical care. Before medication administration, verify the valid prescription, patient identity, allergies, current drug reference, and facility policy. Escalate uncertainty to the registered nurse or clinical instructor before proceeding. I will not invent a patient-specific dose.';
     } else if (q.contains('heart') || q.contains('cardiac') || q.contains('blood')) {
       response = hinglish ? 'Heart ek muscular pump hai jo blood ko lungs aur body tak circulate karta hai. Four chambers: right/left atria, right/left ventricles. Yaad rakho: ventricles blood pump out karte hain.' : hindi ? 'हृदय एक मांसपेशीय पंप है जो रक्त को फेफड़ों और पूरे शरीर में भेजता है। इसमें चार कक्ष होते हैं।' : 'The heart is a muscular pump that circulates blood through the lungs and body. It has four chambers; the ventricles pump blood out.';
     } else if (q.contains('anatomy')) {
@@ -569,11 +622,17 @@ class _SupportPageState extends State<SupportPage> {
   void send() {
     final text = controller.text.trim();
     if (text.isEmpty) return;
+    final reply = answerFor(text);
+    final q = text.toLowerCase();
+    final category = (q.contains('dose') || q.contains('medicine') || q.contains('drug') || q.contains('iv ') || q.contains('injection') || q.contains('vital') || q.contains('infection') || q.contains('sterile'))
+        ? 'clinical_safety'
+        : q.contains('quiz') || q.contains('mcq') || q.contains('question') ? 'practice' : 'nursing';
     setState(() {
       messages.add({'from': 'user', 'text': text});
-      messages.add({'from': 'ai', 'text': answerFor(text)});
+      messages.add({'from': 'ai', 'text': reply});
       controller.clear();
     });
+    unawaited(AutoReplyStore.save(query: text, reply: reply, category: category, sarcasmScore: 10));
   }
 
   @override
