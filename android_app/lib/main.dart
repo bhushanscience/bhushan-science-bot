@@ -46,14 +46,75 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   int index = 0;
+
+  Future<void> _openAdminLogin() async {
+    final keyController = TextEditingController();
+    final key = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Admin access'),
+        content: TextField(
+          controller: keyController,
+          obscureText: true,
+          autocorrect: false,
+          enableSuggestions: false,
+          decoration: const InputDecoration(
+            labelText: 'Admin credentials',
+            border: OutlineInputBorder(),
+          ),
+          onSubmitted: (value) => Navigator.pop(dialogContext, value.trim()),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, keyController.text.trim()),
+            child: const Text('Unlock'),
+          ),
+        ],
+      ),
+    );
+    keyController.dispose();
+    if (!mounted || key == null || key.isEmpty) return;
+    try {
+      final valid = await RemoteUpdateService.verifyAdminKey(
+        baseUrl: defaultUpdateServer,
+        adminKey: key,
+      );
+      if (!mounted) return;
+      if (!valid) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Access denied. Check your admin credentials.')),
+        );
+        return;
+      }
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AdminSettingsPage(
+            language: widget.language,
+            onLanguageChanged: widget.onLanguageChanged,
+            adminKey: key,
+          ),
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not verify credentials. Check your internet connection.')),
+        );
+      }
+    }
+  }
   @override
   Widget build(BuildContext context) {
     final pages = [
-      HomePage(language: widget.language),
+      HomePage(language: widget.language, onAdminAccess: _openAdminLogin),
       const LearningPage(),
       const PracticePage(),
       const FocusPage(),
-      AdminSettingsPage(language: widget.language, onLanguageChanged: widget.onLanguageChanged),
     ];
     return Scaffold(
       body: SafeArea(child: pages[index]),
@@ -66,7 +127,6 @@ class _AppShellState extends State<AppShell> {
           NavigationDestination(icon: Icon(Icons.menu_book), label: 'Learn'),
           NavigationDestination(icon: Icon(Icons.quiz), label: 'Practice'),
           NavigationDestination(icon: Icon(Icons.timer), label: 'Focus'),
-          NavigationDestination(icon: Icon(Icons.admin_panel_settings), label: 'Admin'),
         ],
       ),
     );
@@ -75,14 +135,17 @@ class _AppShellState extends State<AppShell> {
 
 class HomePage extends StatelessWidget {
   final String language;
-  const HomePage({super.key, required this.language});
+  final VoidCallback onAdminAccess;
+  const HomePage({super.key, required this.language, required this.onAdminAccess});
   @override
   Widget build(BuildContext context) {
     final hinglish = language == 'Hinglish';
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        const Row(children: [
+        GestureDetector(
+          onLongPress: onAdminAccess,
+          child: const Row(children: [
           CircleAvatar(backgroundColor: Color(0xFF282F59), child: Icon(Icons.school, color: _accent)),
           SizedBox(width: 12),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -91,6 +154,7 @@ class HomePage extends StatelessWidget {
           ])),
           Icon(Icons.notifications_none),
         ]),
+        ),
         const SizedBox(height: 22),
         Container(
           padding: const EdgeInsets.all(20),
@@ -310,7 +374,8 @@ class _FocusPageState extends State<FocusPage> {
 class AdminSettingsPage extends StatefulWidget {
   final String language;
   final ValueChanged<String> onLanguageChanged;
-  const AdminSettingsPage({super.key, required this.language, required this.onLanguageChanged});
+  final String adminKey;
+  const AdminSettingsPage({super.key, required this.language, required this.onLanguageChanged, required this.adminKey});
   @override
   State<AdminSettingsPage> createState() => _AdminSettingsPageState();
 }
@@ -324,7 +389,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   Widget build(BuildContext context) => ListView(padding: const EdgeInsets.all(20), children: [
     const Text('Admin configuration', style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
     const SizedBox(height: 6),
-    const Text('UI controls preview. Secure admin authentication and server-side sync must be connected before these settings can govern all users.', style: TextStyle(color: Colors.orangeAccent)),
+    const Text('Private administrator controls. Changes published here sync to connected app installations.', style: TextStyle(color: Colors.white60)),
     const SizedBox(height: 18),
     Card(
       color: _panel,
@@ -335,7 +400,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
         trailing: const Icon(Icons.chevron_right),
         onTap: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const RemoteUpdatePage()),
+          MaterialPageRoute(builder: (_) => RemoteUpdatePage(adminKey: widget.adminKey)),
         ),
       ),
     ),
