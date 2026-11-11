@@ -575,51 +575,17 @@ class _SupportPageState extends State<SupportPage> {
       'Drama side, concept center.','Chalo, comeback shuru.',
       'Ab MCQ bhejo.','Focus mode activate karo.'
     ];
-    // 40 distinct closers x 50 openers x 50 jabs x 10 nudges
-    // = 1,000,000 deterministic reply combinations.
+    // 6 distinct closers x 50 openers x 50 jabs x 10 nudges
+    // = 150,000 sarcastic combinations. Plus 50,000 normal-talk
+    // combinations = 200,000 total reply combinations.
     const closers = [
-      'Aur haan, patient care mein kabhi guesswork nahi.',
-      'Ab concept samjho, sirf confidence se kaam nahi chalega.',
-      'Kal ke bharose mat raho; calendar bhi thak gaya hai.',
-      'Ek baar revise karoge toh neurons bhi shukriya bolenge.',
-      'Chalo, ab book kholo—screen ko ghoorne se marks nahi aate.',
       'Clinical doubt ho toh supervisor se verify karna mandatory hai.',
       'Aaj ka target chhota rakho, execution solid rakho.',
-      'Pehle basics clear, phir topper wali entry.',
-      'Question ko tod ke dekho; panic ka koi marks nahi.',
-      'Ab practice karo, theory ko sirf wallpaper mat banao.',
-      'Safety first; shortcut baad mein bhi nahi chalega.',
-      'Ek correct step, dus shortcuts se better hai.',
-      'Revision ka bill pending hai—payment aaj karo.',
-      'Focus ko duty pe report karwao.',
-      'Ab answer likho, imagination se assessment nahi hota.',
-      'Notes ko padhna bhi hota hai, collect hi nahi.',
-      'Thoda consistency lao; motivation guest appearance hai.',
-      'Aaj ka doubt clear, kal ka confidence strong.',
-      'Protocol follow karo; hero banne ki zaroorat nahi.',
-      'Pehle patient identity, phir procedure—order yaad rakho.',
+      'Safety first; shortcut kabhi nahi chalega.',
       'Evidence-based practice, vibes-based nursing nahi.',
       'Agar unsure ho, rukkar qualified supervisor se poochho.',
-      'Ab ek MCQ solve karo aur progress track karo.',
-      'Syllabus ko daily thoda-thoda handle karo.',
-      'Exam hall mein excuses ka separate counter nahi hota.',
-      'Concept ko samjho, phir apne words mein explain karo.',
-      'Learning ka proof practice hai, dramatic announcement nahi.',
-      'Clinical setting mein local policy aur scope follow karo.',
-      'Aaj ka effort kal ka confidence banega.',
-      'Chalo, ab distraction ko waiting room mein bithao.',
-      'Ek topic finish karo; ten tabs kholna achievement nahi.',
-      'Question repeat karo jab tak clarity na aaye.',
-      'Mistake se seekho, unsafe habit repeat mat karo.',
-      'Agar emergency hai toh local emergency protocol activate karo.',
-      'Vitals ko context ke saath assess karna, isolated number nahi.',
-      'Dose guess mat karna—valid order aur reference verify karo.',
-      'Hand hygiene boring lag sakti hai, infection ko nahi.',
-      'Patient dignity aur privacy non-negotiable hain.',
-      'Ab kaam shuru; planning ka season over.',
-      'Senior se verify karna weakness nahi, safe practice hai.'
-    ];
-    int hash = raw.codeUnits.fold(17, (a, b) => (a * 31 + b) & 0x7fffffff);
+      'Patient dignity aur privacy non-negotiable hain.'
+    ];    int hash = raw.codeUnits.fold(17, (a, b) => (a * 31 + b) & 0x7fffffff);
     final opener = openers[hash % openers.length];
     final jab = jabs[(hash ~/ openers.length) % jabs.length];
     final nudge = nudges[(hash ~/ (openers.length * jabs.length)) % nudges.length];
