@@ -613,6 +613,11 @@ class _SupportPageState extends State<SupportPage> {
     } else {
       response = hinglish ? '${roastReply(raw)} Try Anatomy, Physiology, heart, blood, study plan ya MCQ.' : hindi ? 'इस विषय का निश्चित उत्तर अभी उपलब्ध नहीं है। Anatomy, Physiology, हृदय, रक्त या अध्ययन योजना पूछें।' : 'I don’t have a fixed reply for that topic yet. Try Anatomy, Physiology, heart, blood, a study plan, or MCQs. This is a demo responder.';
     }
+    final isGreeting = q == 'hi' || q == 'hello' || q == 'hey' || q == 'namaste';
+    final hasUsefulAnswer = q.contains('dose') || q.contains('dosage') || q.contains('medicine') || q.contains('medication') || q.contains('drug') || q.contains('insulin') || q.contains('iv ') || q.contains('injection') || q.contains('infusion') || q.contains('vital') || q.contains('spo2') || q.contains('oxygen') || q.contains('infection') || q.contains('sterile') || q.contains('hand hygiene') || q.contains('heart') || q.contains('cardiac') || q.contains('blood') || q.contains('anatomy') || q.contains('physiology') || q.contains('study') || q.contains('plan') || q.contains('schedule') || q.contains('padh') || q.contains('quiz') || q.contains('mcq') || q.contains('question');
+    if (hinglish && hasUsefulAnswer && !isGreeting) {
+      response = '${roastReply(raw)}\\n\\n$ response'.replaceFirst(r'$ ', '');
+    }
     if (q.contains('damn') || q.contains('stupid')) {
       response = hinglish ? 'Arre frank mode hai, disrespect mode nahi 😏 Chalo doubt pe aate hain.' : response;
     }
