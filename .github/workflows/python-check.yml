@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - "bot.py"
+      - "update_api.py"
+      - "tests/**"
       - "requirements.txt"
       - ".github/workflows/python-check.yml"
   pull_request:
