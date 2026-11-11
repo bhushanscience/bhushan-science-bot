@@ -76,6 +76,13 @@ def update_health():
     return jsonify({"ok": True, "service": "bhushan-content-updates"})
 
 
+@update_api.post("/admin/auth/check")
+def check_admin_credentials():
+    if not _admin_authorized():
+        return jsonify({"ok": False, "error": "invalid_credentials"}), 401
+    return jsonify({"ok": True, "role": "admin"})
+
+
 @update_api.post("/admin/updates")
 def publish_update():
     if not _admin_authorized():
