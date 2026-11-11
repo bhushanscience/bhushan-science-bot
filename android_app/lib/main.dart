@@ -86,7 +86,7 @@ class AutoReplyStore {
     const roastJabs = [
       'planning ka software update pending lagta hai',
       'focus ko abhi location share karni hai',
-      ' ಪುಸ್ತಕ khuli hai ya sirf table decoration hai',
+      'kitab khuli hai ya sirf table decoration hai',
       'itna suspense toh exam result mein bhi nahi hota',
       'brain ko warm-up ka time de do',
       'revision ka naam sunte hi system buffering karta hai',
