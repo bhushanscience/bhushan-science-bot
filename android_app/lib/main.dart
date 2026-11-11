@@ -25,7 +25,7 @@ class AutoReplyStore {
     final root = await getDatabasesPath();
     _db = await openDatabase(
       p.join(root, 'bhushan_science.db'),
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute('''
           CREATE TABLE auto_replies (
@@ -38,9 +38,130 @@ class AutoReplyStore {
           )
         ''');
         await db.execute('CREATE INDEX idx_user_query ON auto_replies(user_query)');
+        await _seedGeneratedReplies(db);
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await _seedGeneratedReplies(db);
+        }
       },
     );
     return _db!;
+  }
+
+  /// Materializes the complete offline reply catalog once per database.
+  /// 50,000 friendly + 150,000 playful-sarcastic rows = exactly 200,000 rows.
+  static Future<void> _seedGeneratedReplies(Database db) async {
+    final existing = Sqflite.firstIntValue(
+      await db.rawQuery("SELECT COUNT(*) FROM auto_replies WHERE user_query LIKE '__catalog_%'"),
+    ) ?? 0;
+    if (existing >= 200000) return;
+
+    const normalOpeners = [
+      'Achha, samajh gaya', 'Haan, bilkul', 'Theek hai, suno', 'Oh, interesting',
+      'Chalo, baat karte hain', 'Arre haan', 'Good point', 'No worries',
+      'Bilkul, koi tension nahi', 'Sahi hai',
+    ];
+    const normalMiddles = [
+      'Tum apni baat aage batao', 'Thoda context doge toh behtar help milegi',
+      'Isko simple steps mein sort karte hain', 'Jo part confusing hai woh share karo',
+      'Main tumhari baat dhyan se samajh raha hoon', 'Ek example doge toh clear hoga',
+      'Aaram se socho, jaldi zaroori nahi', 'Short answer se shuru kar sakte hain',
+      'Pehle basic point clear karte hain', 'Tum comfortable language mein baat karo',
+    ];
+    const normalEndings = [
+      'Kya scene hai?', 'Aur batao?', 'Main sun raha hoon.', 'Aage kya karna hai?',
+      'Shuru karein?', 'Kis part se start karein?', 'Tum batao.', 'No rush.',
+      'Step by step ho jayega.', 'Jo convenient ho bhejo.', 'Ready when you are.',
+      'Aaram se.', 'Next point?', 'Koi doubt ho toh pooch lena.',
+      'Let us keep it simple.', 'Theek rahega?', 'Ab tumhari baari.',
+      'Baat jaari rakhein?', 'Main help ke liye ready hoon.', 'Chalo, aage badhte hain.',
+    ];
+    const roastOpeners = [
+      'Oho, entry toh strong hai', 'Wah, kya timing hai', 'Chalo, dimaag ko attendance do',
+      'Breaking news suno', 'Aaj phir notification aa gaya', 'Arre professor sahab',
+      'Confidence full charge hai', 'Question ne dramatic entry maari', 'Theek hai, genius mode on',
+      'Syllabus bhi sun raha hai',
+    ];
+    const roastJabs = [
+      'planning ka software update pending lagta hai',
+      'focus ko abhi location share karni hai',
+      ' ಪುಸ್ತಕ khuli hai ya sirf table decoration hai',
+      'itna suspense toh exam result mein bhi nahi hota',
+      'brain ko warm-up ka time de do',
+      'revision ka naam sunte hi system buffering karta hai',
+      'calendar tumse milne ka appointment maang raha hai',
+      'notes ko bhi thoda attention milna chahiye',
+      'procrastination ko unpaid internship se hatao',
+      'concept ko guest appearance mat do',
+    ];
+    const nudges = [
+      'Ab ek chhota step choose karo.',
+      'Pehle 10 minute ka target rakho.',
+      'Ek topic complete karke tick lagao.',
+      'Phone side mein rakhkar shuru karo.',
+      'Ek MCQ solve karke momentum banao.',
+      'Doubt ko clearly likho.',
+      'Break ke baad wapas focus par aao.',
+      'Aaj ka realistic target set karo.',
+      'Concept samjho, phir recall karo.',
+      'Consistency ko priority do.',
+    ];
+    const roastClosers = [
+      'Chalo, ab action dikhao.', 'Excuses ko baad mein sunenge.',
+      'Progress report ka wait rahega.', 'Ab padhai ko bhi chance do.',
+      'Drama kam, practice zyada.', 'Deal?'
+    ];
+
+    final openers = List<String>.generate(50, (i) =>
+      '${normalOpeners[i % 10]} — ${['friendly reminder', 'simple version', 'one step at a time', 'no pressure', 'clear approach'][i ~/ 10]}');
+    final middles = List<String>.generate(50, (i) =>
+      '${normalMiddles[i % 10]}; ${['main point par aate hain', 'example se samjhenge', 'facts clear rakhenge', 'confusion ko todte hain', 'practical solution nikaalte hain'][i ~/ 10]}.');
+    final sarcasticOpeners = List<String>.generate(50, (i) =>
+      '${roastOpeners[i % 10]} — ${['friendly roast', 'study alert', 'focus check', 'revision reminder', 'comeback mode'][i ~/ 10]}');
+    final jabs = List<String>.generate(50, (i) =>
+      '${roastJabs[i % 10]} (${['classic', 'daily', 'special', 'premium', 'exam edition'][i ~/ 10]})');
+
+    await db.transaction((txn) async {
+      var batch = txn.batch();
+      var pending = 0;
+      for (var i = 0; i < 50000; i++) {
+        final opener = openers[i ~/ 1000];
+        final middle = middles[(i ~/ 20) % 50];
+        final ending = normalEndings[i % 20];
+        batch.insert('auto_replies', {
+          'user_query': '__catalog_normal_$i',
+          'bot_reply': '$opener $middle $ending',
+          'category': 'normal_talk',
+          'sarcasm_score': 0,
+        });
+        pending++;
+        if (pending == 1000) {
+          await batch.commit(noResult: true);
+          batch = txn.batch();
+          pending = 0;
+        }
+      }
+      for (var i = 0; i < 150000; i++) {
+        final opener = sarcasticOpeners[i ~/ 3000];
+        final jab = jabs[(i ~/ 60) % 50];
+        final nudge = nudges[(i ~/ 6) % 10];
+        final closer = roastClosers[i % 6];
+        batch.insert('auto_replies', {
+          'user_query': '__catalog_sarcastic_$i',
+          'bot_reply': '$opener, $jab. $nudge $closer',
+          'category': 'sarcastic',
+          'sarcasm_score': 7,
+        });
+        pending++;
+        if (pending == 1000) {
+          await batch.commit(noResult: true);
+          batch = txn.batch();
+          pending = 0;
+        }
+      }
+      if (pending > 0) await batch.commit(noResult: true);
+    });
   }
 
   static Future<void> save({required String query, required String reply, String category = 'nursing', int sarcasmScore = 10}) async {
