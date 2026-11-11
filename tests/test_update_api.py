@@ -36,6 +36,25 @@ class HybridUpdateApiTests(unittest.TestCase):
             )
         self.assertEqual(response.status_code, 401)
 
+    def test_admin_auth_check_rejects_invalid_credentials(self):
+        with patch.dict(os.environ, {"BHUSHAN_UPDATE_ADMIN_KEY": "test-secret"}):
+            response = self.client.post(
+                "/api/v1/admin/auth/check",
+                headers={"X-Admin-Key": "wrong"},
+                json={},
+            )
+        self.assertEqual(response.status_code, 401)
+
+    def test_admin_auth_check_accepts_valid_credentials(self):
+        with patch.dict(os.environ, {"BHUSHAN_UPDATE_ADMIN_KEY": "test-secret"}):
+            response = self.client.post(
+                "/api/v1/admin/auth/check",
+                headers={"X-Admin-Key": "test-secret"},
+                json={},
+            )
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.get_json()["ok"])
+
     def test_publish_then_fetch_manifest(self):
         with patch.dict(os.environ, {"BHUSHAN_UPDATE_ADMIN_KEY": "test-secret"}):
             response = self.client.post(
