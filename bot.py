@@ -17,6 +17,7 @@ from telegram.ext import (
 from telegram.constants import ParseMode
 from telegram.error import Conflict, InvalidToken
 from flask import Flask
+from update_api import update_api
 import pytz
 from instamart_offer import instamart_start, instamart_input, instamart_command
 
@@ -41,6 +42,7 @@ IST = pytz.timezone(TIMEZONE)
 
 # ================== FLASK WEB SERVER ==================
 web_app = Flask(__name__)
+web_app.register_blueprint(update_api)
 
 @web_app.route('/')
 def home():
