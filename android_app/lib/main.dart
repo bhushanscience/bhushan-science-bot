@@ -50,9 +50,9 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     final pages = [
       HomePage(language: widget.language),
-      LearningPage(),
-      PracticePage(),
-      FocusPage(),
+      const LearningPage(),
+      const PracticePage(),
+      const FocusPage(),
       AdminSettingsPage(language: widget.language, onLanguageChanged: widget.onLanguageChanged),
     ];
     return Scaffold(
