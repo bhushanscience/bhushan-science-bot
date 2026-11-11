@@ -3,12 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 import 'remote_updates.dart';
+import 'release_updates.dart';
+
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   unawaited(AutoReplyStore.database);
   runApp(const BhushanScienceApp());
   unawaited(RemoteUpdateService.syncOnStartup());
+  unawaited(ReleaseUpdateService.start());
 }
 
 const _bg = Color(0xFF0B1020);
@@ -191,6 +195,7 @@ class _BhushanScienceAppState extends State<BhushanScienceApp> {
   @override
   Widget build(BuildContext context) => MaterialApp(
         title: 'Bhushan Science',
+        navigatorKey: appNavigatorKey,
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: _accent, brightness: Brightness.dark),
@@ -324,7 +329,11 @@ class HomePage extends StatelessWidget {
             Text('BHUSHAN SCIENCE', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1)),
             Text('Nursing learning companion', style: TextStyle(color: Colors.white60)),
           ])),
-          Icon(Icons.notifications_none),
+          IconButton(
+            tooltip: 'Check app updates',
+            onPressed: () => unawaited(ReleaseUpdateService.checkAndPrompt(forceCheck: true)),
+            icon: const Icon(Icons.notifications_none),
+          ),
         ]),
         ),
         const SizedBox(height: 22),
