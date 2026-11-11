@@ -565,7 +565,8 @@ class _SupportPageState extends State<SupportPage> {
       'doubt bhejo, overthinking ko unpaid overtime mat do',
       'learning ka engine start karo, horn bajana band',
       'routine banao, motivation ka weather unreliable hai',
-      'marks ke liye kaam karo, excuses ke liye nahi'
+      'marks ke liye kaam karo, excuses ke liye nahi',
+      'clinical basics ko pakdo; guesswork ko gate ke bahar rakho'
     ];
     const nudges = [
       'Chalo, ab actual question batao 😏','Ab padhai ka scene set karo 😎',
