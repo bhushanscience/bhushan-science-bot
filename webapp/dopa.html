@@ -22,7 +22,7 @@
 const $=id=>document.getElementById(id);
 if(!window.THREE){$('message').textContent='The local 3D engine is missing. Reinstall the latest DOPA app.';$('start').disabled=true;return}
 const T=window.THREE;
-let scene,camera,renderer,player,clock=new T.Clock(),playing=false,steer=0,steerLeft=false,steerRight=false,boost=false,playerX=0,distance=0,speed=0,nitro=100,best=0,elapsed=0,cameraShake=0;
+let scene,camera,renderer,clock=new T.Clock(),playing=false,steer=0,steerLeft=false,steerRight=false,boost=false,playerX=0,distance=0,speed=0,nitro=100,best=0,elapsed=0,cameraShake=0;
 const traffic=[],scenery=[],barrierSegments=[],sparks=[];
 try{best=Number(localStorage.getItem('dopa_3d_best')||0)||0}catch(e){}
 $('best').textContent=best+' m';
@@ -86,7 +86,7 @@ function makeBarrierSection(z){const group=new T.Group();for(const side of [-1,1
  for(const y of [.42,.7]){const beam=new T.Mesh(new T.BoxGeometry(.12,.13,280),barrierMetal);beam.position.set(side*5.78,y,-137.5);beam.castShadow=true;group.add(beam)}
  }group.position.z=z;scene.add(group);barrierSegments.push(group)}
 makeBarrierSection(0);makeBarrierSection(-280);
-for(let i=0;i<70;i++)for(const side of [-1,1]){const strip=new T.Mesh(new T.BoxGeometry(.34,.025,.28),mat(0xc6c9c6,.82));strip.position.set(side*4.92,.035,-i*4);roadGroup.add(strip)}
+for(let i=0;i<40;i++)for(const side of [-1,1]){const strip=new T.Mesh(new T.BoxGeometry(.34,.025,.28),mat(0xc6c9c6,.82));strip.position.set(side*4.92,.035,-i*7.5);roadGroup.add(strip)}
 const ground=new T.Mesh(new T.PlaneGeometry(800,800),grass);ground.rotation.x=-Math.PI/2;ground.position.y=-.13;ground.receiveShadow=true;scene.add(ground);
 function makeTree(x,z,s){const g=new T.Group(),trunk=new T.Mesh(new T.CylinderGeometry(.13*s,.19*s,1.6*s,9),mat(0x70503a));trunk.position.y=.8*s;trunk.castShadow=true;g.add(trunk);for(let j=0;j<3;j++){const crown=new T.Mesh(new T.ConeGeometry((1.02-j*.16)*s,1.65*s,10),mat([0x286440,0x397a48,0x4b8e54][j]));crown.position.y=(1.65+j*.57)*s;crown.castShadow=true;g.add(crown)}g.position.set(x,0,z);scene.add(g);scenery.push(g)}
 for(let i=0;i<58;i++){const z=-i*5-8;makeTree(-8.5-Math.random()*8,z,.65+Math.random()*1.15);makeTree(8.5+Math.random()*8,z,.65+Math.random()*1.15)}
