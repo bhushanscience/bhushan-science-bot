@@ -13,10 +13,15 @@ const THREE=window.THREE;let scene,camera,renderer,player,road,roadLines=[],traf
 $('best').textContent=best+' m';
 scene=new THREE.Scene();scene.background=new THREE.Color(0x91c9ed);scene.fog=new THREE.Fog(0x91c9ed,65,260);
 camera=new THREE.PerspectiveCamera(67,innerWidth/innerHeight,.1,500);camera.position.set(0,5.4,10.8);
-renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.7));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;document.body.insertBefore(renderer.domElement,document.body.firstChild);
-scene.add(new THREE.HemisphereLight(0xcceaff,0x556044,2.1));const sun=new THREE.DirectionalLight(0xfff1d2,3.4);sun.position.set(-35,55,25);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-45;sun.shadow.camera.right=45;sun.shadow.camera.top=70;sun.shadow.camera.bottom=-70;scene.add(sun);
+renderer=new THREE.WebGLRenderer({antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.setSize(innerWidth,innerHeight);renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;document.body.insertBefore(renderer.domElement,document.body.firstChild);
+scene.add(new THREE.HemisphereLight(0xcceaff,0x556044,2.1));const sun=new THREE.DirectionalLight(0xfff1d2,3.4);sun.position.set(-35,55,25);sun.castShadow=true;sun.shadow.mapSize.set(1536,1536);sun.shadow.camera.left=-45;sun.shadow.camera.right=45;sun.shadow.camera.top=70;sun.shadow.camera.bottom=-70;scene.add(sun);
 const mat=(color,rough=.65,metal=0)=>new THREE.MeshStandardMaterial({color,roughness:rough,metalness:metal});
 const asphalt=mat(0x343a40,.92),white=mat(0xf2f1df,.55),grass=mat(0x6c9855,1),dark=mat(0x151b20,.75),rubber=mat(0x101216,.95),glass= new THREE.MeshStandardMaterial({color:0x17364b,roughness:.18,metalness:.45}),chrome=mat(0xb7c4ce,.22,.8);
+// Procedural road grain gives the road a less flat, more grounded finish without external assets.
+const roadCanvas=document.createElement('canvas');roadCanvas.width=roadCanvas.height=512;
+const roadCtx=roadCanvas.getContext('2d');roadCtx.fillStyle='#343a40';roadCtx.fillRect(0,0,512,512);
+for(let i=0;i<18000;i++){const v=35+Math.random()*55;roadCtx.fillStyle='rgba('+v+','+v+','+v+',.18)';roadCtx.fillRect(Math.random()*512,Math.random()*512,1+Math.random()*2,1+Math.random()*2)}
+const roadTexture=new THREE.CanvasTexture(roadCanvas);roadTexture.wrapS=roadTexture.wrapT=THREE.RepeatWrapping;roadTexture.repeat.set(2,18);roadTexture.colorSpace=THREE.SRGBColorSpace;asphalt.map=roadTexture;asphalt.needsUpdate=true;
 const box=(parent,x,y,z,sx,sy,sz,m)=>{let o=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),m);o.position.set(x,y,z);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o};
 function buildCar(color,playerCar){let g=new THREE.Group(),paint=new THREE.MeshStandardMaterial({color,roughness:.27,metalness:.72}),tireGeo=new THREE.CylinderGeometry(.37,.37,.24,20),rimGeo=new THREE.CylinderGeometry(.2,.2,.25,16),wheelList=[];
 box(g,0,.62,0,1.72,.55,3.35,paint);box(g,0,.91,-.18,1.42,.42,1.7,paint);let cabin=box(g,0,1.18,-.35,1.12,.58,1.12,glass);cabin.castShadow=true;
@@ -28,6 +33,20 @@ g.userData.wheels=wheelList;scene.add(g);return g}
 player=buildCar(0xffbd27,true);player.position.set(0,0,0);
 const roadGroup=new THREE.Group();scene.add(roadGroup);
 function roadCreate(){let geo=new THREE.PlaneGeometry(10.5,280,1,40);geo.rotateX(-Math.PI/2);let mesh=new THREE.Mesh(geo,asphalt);mesh.position.z=-100;mesh.receiveShadow=true;roadGroup.add(mesh);let shoulderM=mat(0xc5c6b7);for(let side of [-1,1]){let sh=new THREE.Mesh(new THREE.BoxGeometry(.18,.06,280),shoulderM);sh.position.set(side*5.2,.03,-100);roadGroup.add(sh)}for(let lane of [-1.75,1.75])for(let i=0;i<36;i++){let m=new THREE.Mesh(new THREE.BoxGeometry(.12,.025,3.2),white);m.position.set(lane,.025,-i*7.5);roadGroup.add(m);roadLines.push(m)}}roadCreate();
+// Continuous roadside steel barriers, reflective posts and rumble strips add depth and scale.
+const barrierMat=mat(0x9baab4,.3,.78),postMat=mat(0x65737e,.42,.65),reflectorMat=new THREE.MeshStandardMaterial({color:0xffd88a,emissive:0x5a3100,roughness:.25});
+for(const side of [-1,1]){
+ const rail=new THREE.Group();
+ for(let i=0;i<56;i++){
+  const z=-i*5;
+  const post=new THREE.Mesh(new THREE.BoxGeometry(.09,.72,.12),postMat);post.position.set(side*5.75,.36,z);post.castShadow=true;rail.add(post);
+  const reflector=new THREE.Mesh(new THREE.BoxGeometry(.035,.12,.025),reflectorMat);reflector.position.set(side*5.805,.56,z);rail.add(reflector);
+ }
+ for(const y of [.42,.7]){const beam=new THREE.Mesh(new THREE.BoxGeometry(.12,.13,280),barrierMat);beam.position.set(side*5.75,y,-137.5);beam.castShadow=true;rail.add(beam)}
+ rail.position.z=0;scene.add(rail);decor.push(rail);
+}
+// Fine transverse rumble strips at the road edges.
+for(let i=0;i<70;i++)for(const side of [-1,1]){const strip=new THREE.Mesh(new THREE.BoxGeometry(.34,.025,.28),mat(0xc4c7c5,.8));strip.position.set(side*4.92,.035,-i*4);roadGroup.add(strip)}
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(800,800),grass);ground.rotation.x=-Math.PI/2;ground.position.y=-.12;ground.receiveShadow=true;scene.add(ground);
 function makeTree(x,z,s){let group=new THREE.Group();let trunk=new THREE.Mesh(new THREE.CylinderGeometry(.14*s,.2*s,1.6*s,8),mat(0x70503a));trunk.position.y=.8*s;trunk.castShadow=true;group.add(trunk);for(let j=0;j<3;j++){let crown=new THREE.Mesh(new THREE.ConeGeometry((1.05-j*.17)*s,1.6*s,9),mat([0x2c6840,0x387d47,0x4b8f50][j]));crown.position.y=(1.65+j*.58)*s;crown.castShadow=true;group.add(crown)}group.position.set(x,0,z);scene.add(group);decor.push(group)}
 for(let i=0;i<60;i++){let z=-i*5-8;makeTree(-8.5-Math.random()*8,z,.65+Math.random()*1.2);makeTree(8.5+Math.random()*8,z,.65+Math.random()*1.2)}
@@ -40,9 +59,9 @@ $('start').addEventListener('click',start);
 function bindHold(id,val){let b=$(id);b.addEventListener('pointerdown',e=>{e.preventDefault();steer=val;b.classList.add('down')});['pointerup','pointercancel','pointerleave'].forEach(ev=>b.addEventListener(ev,()=>{if(steer===val)steer=0;b.classList.remove('down')}))}bindHold('left',-1);bindHold('right',1);$('boost').addEventListener('pointerdown',e=>{e.preventDefault();boost=true;$('boost').classList.add('down')});['pointerup','pointercancel','pointerleave'].forEach(ev=>$('boost').addEventListener(ev,()=>{boost=false;$('boost').classList.remove('down')}));
 addEventListener('keydown',e=>{if(e.key==='ArrowLeft'||e.key==='a')steer=-1;if(e.key==='ArrowRight'||e.key==='d')steer=1;if(e.key===' '||e.key==='Shift')boost=true;if(e.key==='Enter'&&!playing)start()});addEventListener('keyup',e=>{if(['ArrowLeft','ArrowRight','a','d'].includes(e.key))steer=0;if(e.key===' '||e.key==='Shift')boost=false});
 let touchX=null;renderer.domElement.addEventListener('pointerdown',e=>{touchX=e.clientX});renderer.domElement.addEventListener('pointermove',e=>{if(touchX!==null&&playing){playerX=THREE.MathUtils.clamp(playerX+(e.clientX-touchX)/innerWidth*9,-4.1,4.1);touchX=e.clientX}});['pointerup','pointercancel'].forEach(ev=>renderer.domElement.addEventListener(ev,()=>touchX=null));
-function tick(){requestAnimationFrame(tick);let dt=Math.min(clock.getDelta(),.05);if(playing){elapsed+=dt;let target=boost&&nitro>0?42:29+Math.min(elapsed*.42,20);speed=THREE.MathUtils.lerp(speed,target,dt*1.6);distance+=speed*dt*.72;nitro=THREE.MathUtils.clamp(nitro+(boost&&nitro>0?-28:8)*dt,0,100);playerX=THREE.MathUtils.clamp(playerX+steer*dt*5.2,-4.3,4.3);player.position.x=playerX;player.rotation.z=-steer*.11;player.rotation.y=-playerX*.035;player.userData.wheels.forEach(q=>q.rotation.x-=speed*dt*1.8);
+function tick(){requestAnimationFrame(tick);let dt=Math.min(clock.getDelta(),.05);if(playing){elapsed+=dt;let target=boost&&nitro>0?42:29+Math.min(elapsed*.42,20);speed=THREE.MathUtils.lerp(speed,target,dt*1.6);distance+=speed*dt*.78;nitro=THREE.MathUtils.clamp(nitro+(boost&&nitro>0?-24:7)*dt,0,100);playerX=THREE.MathUtils.clamp(playerX+steer*dt*5.2,-4.3,4.3);player.position.x=playerX;player.rotation.z=-steer*.11;player.rotation.y=-playerX*.035;player.userData.wheels.forEach(q=>q.rotation.x-=speed*dt*1.8);
 roadGroup.position.z=(roadGroup.position.z+speed*dt)%7.5;roadLines.forEach(m=>m.position.z+=speed*dt>0?0:0);decor.forEach(o=>{o.position.z+=speed*dt;if(o.position.z>18)o.position.z=-280-Math.random()*20});
-if(Math.random()<dt*(.48+elapsed*.012))spawnTraffic();traffic.forEach(o=>{o.z+=speed*dt-o.spd*dt;o.car.position.z=o.z;o.car.userData.wheels.forEach(q=>q.rotation.x-=o.spd*dt*1.7)});traffic=traffic.filter(o=>{if(o.z>20){scene.remove(o.car);return false}return true});
+if(Math.random()<dt*(.58+elapsed*.014))spawnTraffic();traffic.forEach(o=>{o.z+=speed*dt-o.spd*dt;o.car.position.z=o.z;o.car.userData.wheels.forEach(q=>q.rotation.x-=o.spd*dt*1.7)});traffic=traffic.filter(o=>{if(o.z>20){scene.remove(o.car);return false}return true});
 for(let o of traffic){if(Math.abs(o.z)<2.9&&Math.abs(o.lane-playerX)<1.8){endRace();break}}
 $('distance').textContent=Math.floor(distance)+' m';$('speed').textContent=Math.floor(speed*3.6)+' km/h';$('fill').style.width=nitro+'%';
 }
