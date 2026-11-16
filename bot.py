@@ -768,15 +768,19 @@ def technique_selection_kb():
     return InlineKeyboardMarkup(btns)
 
 def main_menu_kb():
+    # Telegram reply keyboards do not support custom button background colours.
+    # Use vivid emoji accents and a balanced two-column dashboard instead.
     app_button = KeyboardButton("📱 Study App", web_app=WebAppInfo(url=WEBAPP_URL)) if WEBAPP_URL else KeyboardButton("📱 Study App")
     return ReplyKeyboardMarkup([
-        [app_button, KeyboardButton("📚 Padhai Shuru"), KeyboardButton("📸 Doubt Clear")],
-        [KeyboardButton("🎉 Join Fun"), KeyboardButton("🎯 Exam Countdown"), KeyboardButton("📅 Aaj ka Target")],
-        [KeyboardButton("🏆 Points"), KeyboardButton("🏅 Leaderboard"), KeyboardButton("🎖️ Badges")],
-        [KeyboardButton("🎭 Mode Badlo"), KeyboardButton("📊 Report")],
+        [KeyboardButton("📚 Padhai Shuru"), KeyboardButton("📸 Doubt Clear")],
+        [KeyboardButton("🎯 Exam Countdown"), KeyboardButton("📅 Aaj ka Target")],
+        [KeyboardButton("🏆 Points"), KeyboardButton("🏅 Leaderboard")],
+        [KeyboardButton("🎖️ Badges"), KeyboardButton("🎭 Mode Badlo")],
+        [KeyboardButton("📊 Report"), KeyboardButton("🎉 Join Fun")],
         [KeyboardButton("🛒 Instamart Offer Checker")],
-        [KeyboardButton("💭 Thought"), KeyboardButton("😂 Meme"), KeyboardButton("❓ Help")]
-    ], resize_keyboard=True)
+        [KeyboardButton("💭 Thought"), KeyboardButton("😂 Meme")],
+        [KeyboardButton("❓ Help"), app_button]
+    ], resize_keyboard=True, is_persistent=True)
 
 async def join_fun_view(update: Update, context: ContextTypes.DEFAULT_TYPE):
     name = get_setting('join_fun_name', '').strip()
@@ -791,16 +795,17 @@ async def join_fun_view(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 def admin_menu_kb():
+    # Keep every existing callback ID intact; only improve visual grouping.
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("👥 Users", callback_data="a_users"), InlineKeyboardButton("📢 Channels", callback_data="a_channels")],
-        [InlineKeyboardButton("🎉 Join Fun", callback_data="a_joinfun"), InlineKeyboardButton("⚙️ Settings", callback_data="a_settings")],
-        [InlineKeyboardButton("❓ Questions", callback_data="a_questions")],
-        [InlineKeyboardButton("💭 Quotes", callback_data="a_quotes"), InlineKeyboardButton("😂 Memes", callback_data="a_memes")],
+        [InlineKeyboardButton("📊 Dashboard / Stats", callback_data="a_stats"), InlineKeyboardButton("👥 Users", callback_data="a_users")],
         [InlineKeyboardButton("📣 Broadcast", callback_data="a_broadcast"), InlineKeyboardButton("💬 Doubts", callback_data="a_doubts")],
-        [InlineKeyboardButton("🎯 Daily Quiz", callback_data="a_dq"), InlineKeyboardButton("⏰ Times", callback_data="a_times")],
+        [InlineKeyboardButton("🧠 Questions", callback_data="a_questions"), InlineKeyboardButton("🎯 Daily Quiz", callback_data="a_dq")],
+        [InlineKeyboardButton("💭 Quotes", callback_data="a_quotes"), InlineKeyboardButton("😂 Memes", callback_data="a_memes")],
+        [InlineKeyboardButton("⚙️ Settings", callback_data="a_settings"), InlineKeyboardButton("⏰ Times", callback_data="a_times")],
+        [InlineKeyboardButton("🎉 Join Fun", callback_data="a_joinfun"), InlineKeyboardButton("📢 Channels", callback_data="a_channels")],
         [InlineKeyboardButton("🆘 Support Tickets", callback_data="a_support"), InlineKeyboardButton("📣 Force Join", callback_data="a_forcejoin")],
-        [InlineKeyboardButton("📊 Stats", callback_data="a_stats"), InlineKeyboardButton("👤 Admins", callback_data="a_admins")],
-        [InlineKeyboardButton("🛡️ Ban/Unban", callback_data="a_ban"), InlineKeyboardButton("🎁 Gift Points", callback_data="a_gift")],
+        [InlineKeyboardButton("👤 Admins", callback_data="a_admins"), InlineKeyboardButton("🛡️ Ban/Unban", callback_data="a_ban")],
+        [InlineKeyboardButton("🎁 Gift Points", callback_data="a_gift")],
     ])
 
 # ================== MINI APP ==================
