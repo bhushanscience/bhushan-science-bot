@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#07131e">
+<title>DOPA Racing 3D — Neon Rush</title>
+<style>
+:root{--gold:#ffe0a0;--orange:#ff9b43;--ink:#07131e}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;touch-action:none}
+canvas{display:block;width:100%;height:100%}
+#hud{position:absolute;inset:0;pointer-events:none;color:#fff}
+.top{display:flex;justify-content:space-between;align-items:flex-start;padding:calc(env(safe-area-inset-top) + 14px) 16px 0}
+.pill{background:#081723c9;border:1px solid #ffffff26;border-radius:14px;padding:9px 13px;backdrop-filter:blur(8px);box-shadow:0 5px 18px #0005}
+.small{font-size:10px;letter-spacing:2px;color:#ffcc7b;font-weight:800}.value{font-size:21px;font-weight:900;font-variant-numeric:tabular-nums}
+#speed{font-size:25px}
+#hint{position:absolute;top:22%;left:50%;transform:translateX(-50%);text-align:center;font-weight:800;letter-spacing:2px;text-shadow:0 2px 8px #000;opacity:.75}
+#controls{position:absolute;bottom:calc(env(safe-area-inset-bottom) + 18px);left:0;right:0;display:flex;justify-content:space-between;padding:0 22px;pointer-events:auto}
+.steer{width:74px;height:74px;border-radius:50%;border:1px solid #ffe0a066;background:#07131e99;color:#ffe0a0;font-size:34px;font-weight:900;box-shadow:inset 0 0 18px #ff9b4320;touch-action:none}
+#boost{width:78px;height:78px;border-radius:50%;border:2px solid #ff9b43aa;background:#ff9b4324;color:#ffe0a0;font-size:12px;font-weight:900;letter-spacing:1px}
+#overlay{position:absolute;inset:0;display:grid;place-items:center;background:linear-gradient(#04101a55,#04101acc);padding:20px}
+.panel{max-width:360px;width:100%;text-align:center;padding:28px 22px;border:1px solid #ffe0a055;border-radius:24px;background:linear-gradient(145deg,#122638f2,#07131ef5);box-shadow:0 20px 60px #0009}
+.logo{font-size:12px;letter-spacing:5px;color:var(--gold);font-weight:900}.title{font-size:clamp(32px,9vw,48px);font-weight:1000;line-height:1;color:white;margin:10px 0}.title span{color:var(--orange)}
+.desc{color:#c2d0dc;font-size:13px;line-height:1.6;margin:16px 0 22px}
+.action{width:100%;border:0;border-radius:14px;padding:15px;background:linear-gradient(90deg,#ff9b43,#ffe0a0);color:#17202a;font-weight:1000;letter-spacing:2px;font-size:15px}
+#sub{font-size:11px;color:#9cb0c1;margin-top:12px}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">
+ <div class="top">
+  <div class="pill"><div class="small">DISTANCE</div><div class="value"><span id="distance">0</span><span style="font-size:12px;color:#ffcc7b"> m</span></div></div>
+  <div class="pill" style="text-align:right"><div class="small">SPEED</div><div class="value" id="speed">0 <span style="font-size:11px;color:#ffcc7b">KM/H</span></div></div>
+ </div>
+ <div id="hint">KEEP YOUR LINE</div>
+ <div id="controls">
+  <div style="display:flex;gap:12px"><button class="steer" id="left" aria-label="Steer left">‹</button><button class="steer" id="right" aria-label="Steer right">›</button></div>
+  <button id="boost">NITRO<br>⚡</button>
+ </div>
+</div>
+<div id="overlay">
+ <div class="panel">
+  <div class="logo">DOPA ARCADE SERIES</div>
+  <div class="title">NEON <span>RUSH</span></div>
+  <div class="desc" id="message">A fast, mobile-friendly arcade racer. Dodge traffic, hold your lane, and build your distance. Use the arrows or tap the steering controls.</div>
+  <button class="action" id="start">START RACE</button>
+  <div id="sub">TOUCH STEERING • NITRO • ENDLESS ROAD</div>
+ </div>
+</div>
+<script>
+(()=>{"use strict";
+const canvas=document.getElementById("game"),ctx=canvas.getContext("2d");
+const $=id=>document.getElementById(id);
+let W=0,H=0,dpr=1,playing=false,crashed=false,playerX=0,speed=0,baseSpeed=0.42,dist=0,score=0,spawnClock=0,nitro=0,steer=0,last=0,traffic=[],roadPhase=0;
+function resize(){dpr=Math.min(window.devicePixelRatio||1,2);W=innerWidth;H=innerHeight;canvas.width=Math.floor(W*dpr);canvas.height=Math.floor(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0)}
+addEventListener("resize",resize);resize();
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function roadAt(z){const horizon=H*.32,depth=H*.72;const y=horizon+z*z*depth;const half=W*(.08+.44*z);const curve=Math.sin(roadPhase+z*2.2)*W*.045*z;return {y,half,cx:W*.5+curve}}
+function polygon(points,fill,stroke){ctx.beginPath();points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.closePath();if(fill) {ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.stroke()}}
+function drawBackground(dt){const sky=ctx.createLinearGradient(0,0,0,H*.55);sky.addColorStop(0,"#081522");sky.addColorStop(.65,"#34465b");sky.addColorStop(1,"#f0a36b");ctx.fillStyle=sky;ctx.fillRect(0,0,W,H);
+const sunX=W*.72,sunY=H*.25;const glow=ctx.createRadialGradient(sunX,sunY,2,sunX,sunY,W*.22);glow.addColorStop(0,"#ffe0a0aa");glow.addColorStop(1,"#ffe0a000");ctx.fillStyle=glow;ctx.fillRect(0,0,W,H*.55);
+ctx.fillStyle="#162b3b";for(let i=0;i<22;i++){let x=(i/21)*W;let bh=H*(.05+((i*17)%13)/180);polygon([{x,y:H*.32},{x:x+W*.035,y:H*.32-bh},{x:x+W*.07,y:H*.32}],"#203447")}
+const ground=ctx.createLinearGradient(0,H*.32,0,H);ground.addColorStop(0,"#33463b");ground.addColorStop(1,"#111f1a");ctx.fillStyle=ground;ctx.fillRect(0,H*.32,W,H*.68)}
+function drawRoad(){const strips=90;for(let i=0;i<strips;i++){const z0=i/strips,z1=(i+1)/strips,a=roadAt(z0),b=roadAt(z1);const stripe=(Math.floor((dist*.06)+i/3)%2)===0;polygon([{x:a.cx-a.half,y:a.y},{x:a.cx+a.half,y:a.y},{x:b.cx+b.half,y:b.y},{x:b.cx-b.half,y:b.y}],stripe?"#343b43":"#2d343c");
+const curb=stripe?"#f1d7b1":"#d25a4a";const w0=Math.max(1,W*.008*z0),w1=Math.max(1,W*.008*z1);polygon([{x:a.cx-a.half-w0,y:a.y},{x:a.cx-a.half,y:a.y},{x:b.cx-b.half,y:b.y},{x:b.cx-b.half-w1,y:b.y}],curb);polygon([{x:a.cx+a.half,y:a.y},{x:a.cx+a.half+w0,y:a.y},{x:b.cx+b.half+w1,y:b.y},{x:b.cx+b.half,y:b.y}],curb)}
+for(let lane=1;lane<=2;lane++){for(let i=0;i<20;i++){let z=((i/20+dist*.018)%1);if(z<.02)continue;const a=roadAt(z),b=roadAt(Math.min(1,z+.025));const x0=a.cx-a.half+(a.half*2*lane/3),x1=b.cx-b.half+(b.half*2*lane/3);const width=Math.max(1.2,W*.004*z);polygon([{x:x0-width,y:a.y},{x:x0+width,y:a.y},{x:x1+width,y:b.y},{x:x1-width,y:b.y}], "#d6dbe0aa")}}
+function carShape(x,y,w,h,color,isPlayer){ctx.save();ctx.translate(x,y);ctx.shadowColor=isPlayer?"#ff9b43":"#000";ctx.shadowBlur=isPlayer?16:6;
+polygon([{x:-w*.43,y:h*.45},{x:-w*.5,y:h*.05},{x:-w*.34,y:-h*.38},{x:-w*.2,y:-h*.5},{x:w*.2,y:-h*.5},{x:w*.34,y:-h*.38},{x:w*.5,y:h*.05},{x:w*.43,y:h*.45}],color);
+ctx.shadowBlur=0;polygon([{x:-w*.28,y:-h*.2},{x:-w*.18,y:-h*.4},{x:w*.18,y:-h*.4},{x:w*.28,y:-h*.2}], "#9fc1d0");polygon([{x:-w*.31,y:h*.05},{x:w*.31,y:h*.05},{x:w*.28,y:-h*.13},{x:-w*.28,y:-h*.13}],"#152c3c");
+ctx.fillStyle="#ffe7b1";ctx.fillRect(-w*.38,h*.27,w*.18,h*.07);ctx.fillRect(w*.2,h*.27,w*.18,h*.07);ctx.fillStyle="#e44e45";ctx.fillRect(-w*.39,-h*.46,w*.15,h*.07);ctx.fillRect(w*.24,-h*.46,w*.15,h*.07);
+ctx.fillStyle="#0b1117";ctx.fillRect(-w*.53,-h*.15,w*.12,h*.25);ctx.fillRect(w*.41,-h*.15,w*.12,h*.25);ctx.restore()}
+function drawTraffic(){traffic.sort((a,b)=>a.z-b.z);for(const t of traffic){if(t.z<=0||t.z>1)continue;const p=roadAt(t.z),laneX=p.cx-p.half+p.half*2*(t.lane/3);const size=W*(.045+.11*t.z);carShape(laneX,size*.45+p.y-size*.9,size*.8,size*1.25,t.color,false)}}
+function drawPlayer(){const p=roadAt(.82),x=p.cx+playerX*p.half*.82;const size=clamp(W*.2,74,118);if(nitro>0){ctx.save();ctx.globalAlpha=.8;polygon([{x:x-size*.13,y:H*.88},{x:x-size*.08,y:H*.98},{x:x,y:H*1.02},{x:x+size*.08,y:H*.98},{x:x+size*.13,y:H*.88}],"#53d9ff");ctx.restore()}carShape(x,H*.82,size,size*1.28,"#f18a35",true)}
+function spawn(){const lane=Math.floor(Math.random()*3);traffic.push({lane,z:0.02,color:["#3f9ec9","#e5d5b6","#bd5c62","#73a17b","#9b87c6"][Math.floor(Math.random()*5)],speed:.18+Math.random()*.15})}
+function update(dt){if(!playing)return;const boostOn=nitro>0;nitro=Math.max(0,nitro-dt);speed=clamp(speed+dt*.18,baseSpeed,boostOn?.75:.62);dist+=speed*dt*100;score=Math.floor(dist);
+roadPhase+=dt*(.25+speed*.5);playerX=clamp(playerX+steer*dt*(boostOn?1.2:1.0),-1.08,1.08);
+spawnClock+=dt;if(spawnClock>Math.max(.5,1.25-dist*.000015)){spawnClock=0;spawn()}
+for(const t of traffic){t.z+=dt*(speed-t.speed+.25);if(t.z>.82&&t.z<.99){const lanePlayer=(playerX+1.08)/2.16*3; if(Math.abs(lanePlayer-(t.lane+.5))<.48){endRace();return}}}
+traffic=traffic.filter(t=>t.z<1.15);
+$("distance").textContent=score.toLocaleString();$("speed").innerHTML=Math.round(speed*260)+" <span style='font-size:11px;color:#ffcc7b'>KM/H</span>";
+}
+function render(dt){drawBackground(dt);drawRoad();drawTraffic();drawPlayer();const shade=ctx.createLinearGradient(0,0,0,H);shade.addColorStop(0,"#00000022");shade.addColorStop(.55,"#00000000");shade.addColorStop(1,"#00000055");ctx.fillStyle=shade;ctx.fillRect(0,0,W,H)}
+function loop(now){const dt=Math.min(.04,(now-last)/1000||0);last=now;update(dt);render(dt);requestAnimationFrame(loop)}
+requestAnimationFrame(loop);
+function startRace(){playing=true;crashed=false;playerX=0;speed=baseSpeed;dist=0;score=0;spawnClock=0;traffic=[];nitro=0;steer=0;$("overlay").classList.add("hidden");$("hint").textContent="KEEP YOUR LINE"}
+function endRace(){playing=false;crashed=true;steer=0;$("message").textContent="Race over! You covered "+score.toLocaleString()+" meters. Keep practicing your steering and try another run."; $("start").textContent="RACE AGAIN";$("overlay").classList.remove("hidden");$("hint").textContent="RACE COMPLETE"}
+$("start").addEventListener("click",startRace);
+function hold(btn,dir){const down=e=>{e.preventDefault();steer=dir},up=e=>{e.preventDefault();if(steer===dir)steer=0};btn.addEventListener("pointerdown",down);btn.addEventListener("pointerup",up);btn.addEventListener("pointercancel",up);btn.addEventListener("pointerleave",up)}
+hold($("left"),-1);hold($("right"),1);
+$("boost").addEventListener("pointerdown",e=>{e.preventDefault();nitro=2.5});
+$("boost").addEventListener("pointerup",e=>e.preventDefault());
+addEventListener("keydown",e=>{if(e.key==="ArrowLeft"||e.key==="a")steer=-1;if(e.key==="ArrowRight"||e.key==="d")steer=1;if(e.key===" "){nitro=2.5;e.preventDefault()}});
+addEventListener("keyup",e=>{if(["ArrowLeft","a","ArrowRight","d"].includes(e.key))steer=0});
+})();
+</script>
+</body>
+</html>
